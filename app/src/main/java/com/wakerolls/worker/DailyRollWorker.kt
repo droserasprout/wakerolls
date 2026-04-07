@@ -39,11 +39,18 @@ class DailyRollWorker @AssistedInject constructor(
         applicationContext.getSystemService(NotificationManager::class.java)
             .notify(1, notification)
 
+        // Re-schedule for next day at same time
+        val hour = inputData.getInt(KEY_HOUR, 8)
+        val minute = inputData.getInt(KEY_MINUTE, 0)
+        scheduleDaily(applicationContext, hour, minute)
+
         return Result.success()
     }
 
     companion object {
         const val WORK_NAME = "daily_roll_notification"
+        const val KEY_HOUR = "hour"
+        const val KEY_MINUTE = "minute"
 
         fun scheduleDaily(context: Context, hour: Int, minute: Int) {
             val now = java.util.Calendar.getInstance()
@@ -51,12 +58,14 @@ class DailyRollWorker @AssistedInject constructor(
                 set(java.util.Calendar.HOUR_OF_DAY, hour)
                 set(java.util.Calendar.MINUTE, minute)
                 set(java.util.Calendar.SECOND, 0)
-                if (before(now)) add(java.util.Calendar.DAY_OF_YEAR, 1)
+                set(java.util.Calendar.MILLISECOND, 0)
+                if (!after(now)) add(java.util.Calendar.DAY_OF_YEAR, 1)
             }
             val delay = target.timeInMillis - now.timeInMillis
 
             val request = OneTimeWorkRequestBuilder<DailyRollWorker>()
                 .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                .setInputData(workDataOf(KEY_HOUR to hour, KEY_MINUTE to minute))
                 .build()
 
             WorkManager.getInstance(context).enqueueUniqueWork(
