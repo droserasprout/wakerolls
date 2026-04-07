@@ -1,1 +1,10 @@
 .worktrees/
+.gradle/
+.idea/
+build/
+*.iml
+local.properties
+*.apk
+*.ap_
+*.dex
+*.class
