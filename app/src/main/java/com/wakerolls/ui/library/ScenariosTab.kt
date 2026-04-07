@@ -2,6 +2,7 @@ package com.wakerolls.ui.library
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,7 +15,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wakerolls.domain.model.Scenario
@@ -43,7 +46,7 @@ fun ScenariosScreen(viewModel: LibraryViewModel = hiltViewModel()) {
                         scenario = scenario,
                         onClick = { viewModel.onEditScenarioClick(scenario) },
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(16.dp))
                 }
             }
         }
@@ -94,29 +97,53 @@ fun ScenariosScreen(viewModel: LibraryViewModel = hiltViewModel()) {
 
 @Composable
 private fun ScenarioCard(scenario: Scenario, onClick: () -> Unit) {
-    val slotSummary = scenario.slots.joinToString(", ") { "${it.count}x ${it.category}" }
-
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(DarkSurface)
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(listOf(AccentGold.copy(alpha = 0.4f), AccentGold.copy(alpha = 0.05f))),
+                shape = RoundedCornerShape(20.dp),
+            )
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(20.dp),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column {
             Text(
                 text = scenario.name,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.headlineMedium,
                 color = TextPrimary,
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = slotSummary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
-            )
+            Spacer(Modifier.height(12.dp))
+            scenario.slots.forEach { slot ->
+                Row(
+                    modifier = Modifier.padding(vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = slot.category.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        letterSpacing = 2.sp,
+                        color = TextSecondary,
+                    )
+                    if (slot.count > 1) {
+                        Spacer(Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = AccentGold.copy(alpha = 0.15f),
+                        ) {
+                            Text(
+                                text = "\u00D7${slot.count}",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AccentGold,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
