@@ -88,6 +88,7 @@ class RollViewModel @Inject constructor(
     }
 
     fun selectScenario(id: Long) {
+        if (id == _uiState.value.selectedScenarioId) return
         _uiState.value = _uiState.value.copy(selectedScenarioId = id, results = emptyList(), hasRolled = false)
     }
 

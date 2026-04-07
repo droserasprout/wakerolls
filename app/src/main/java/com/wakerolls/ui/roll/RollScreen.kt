@@ -1,7 +1,9 @@
 package com.wakerolls.ui.roll
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -156,16 +159,32 @@ private fun AnimatedRollCard(
 ) {
     val offsetX = remember { Animatable(300f) }
     val alpha = remember { Animatable(0f) }
+    val scale = remember { Animatable(0.6f) }
 
     LaunchedEffect(Unit) {
         delay(index * 80L)
         launch { offsetX.animateTo(0f, tween(400, easing = LinearOutSlowInEasing)) }
         launch { alpha.animateTo(1f, tween(300)) }
+        launch {
+            scale.animateTo(
+                1f,
+                keyframes {
+                    durationMillis = 500
+                    0.6f at 0 using FastOutSlowInEasing
+                    1.08f at 300 using FastOutSlowInEasing
+                    1f at 500 using FastOutSlowInEasing
+                },
+            )
+        }
     }
 
     Box(
         modifier = Modifier
             .offset(x = offsetX.value.dp)
+            .graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            }
             .then(Modifier.fillMaxWidth()),
     ) {
         RollCard(
