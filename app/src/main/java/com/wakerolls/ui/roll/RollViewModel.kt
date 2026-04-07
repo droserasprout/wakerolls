@@ -48,6 +48,7 @@ data class RollUiState(
     val enableAnimations: Boolean = true,
     val rollGeneration: Int = 0,
     val weights: Map<Rarity, Int> = Rarity.entries.associate { it to it.weight },
+    val insufficientItems: List<String> = emptyList(), // category warnings
 )
 
 @HiltViewModel
@@ -123,6 +124,19 @@ class RollViewModel @Inject constructor(
             if (!state.allowRerolls || state.rerollsLeft <= 0) return
         }
         viewModelScope.launch {
+            // Check for insufficient items
+            val warnings = mutableListOf<String>()
+            for (slot in scenario.slots) {
+                val available = itemRepository.observeEnabled(slot.category).first().size
+                if (available < slot.count) {
+                    warnings.add("${slot.category}: ${available}/${slot.count} items")
+                }
+            }
+            if (warnings.isNotEmpty()) {
+                _uiState.value = _uiState.value.copy(insufficientItems = warnings)
+                return@launch
+            }
+
             if (state.hasRolled) consumeReroll()
             _uiState.value = _uiState.value.copy(isRolling = true)
 
@@ -153,6 +167,10 @@ class RollViewModel @Inject constructor(
             )
             saveResults(state.selectedScenarioId!!, results)
         }
+    }
+
+    fun dismissInsufficientWarning() {
+        _uiState.value = _uiState.value.copy(insufficientItems = emptyList())
     }
 
     fun reroll(index: Int) {

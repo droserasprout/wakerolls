@@ -137,6 +137,25 @@ fun RollScreen(viewModel: RollViewModel = hiltViewModel()) {
         }
         Spacer(Modifier.height(24.dp))
     }
+
+    if (state.insufficientItems.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissInsufficientWarning() },
+            title = { Text("Not enough items", color = TextPrimary) },
+            text = {
+                Text(
+                    text = state.insufficientItems.joinToString("\n"),
+                    color = TextSecondary,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissInsufficientWarning() }) {
+                    Text("OK", color = AccentGold)
+                }
+            },
+            containerColor = DarkSurface,
+        )
+    }
 }
 
 @Composable
