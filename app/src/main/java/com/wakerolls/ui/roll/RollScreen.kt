@@ -1,27 +1,25 @@
 package com.wakerolls.ui.roll
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,13 +28,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wakerolls.domain.model.Item
 import com.wakerolls.domain.model.Rarity
 import com.wakerolls.ui.theme.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-private const val LONG_PRESS_DURATION_MS = 3000
 
 @Composable
 fun RollScreen(viewModel: RollViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val canRerollAll = state.allowRerolls && state.rerollsLeft > 0
+    val isUnlimited = state.rerollsPerDay == 0
 
     Column(
         modifier = Modifier
@@ -53,13 +52,13 @@ fun RollScreen(viewModel: RollViewModel = hiltViewModel()) {
         )
         Spacer(Modifier.height(8.dp))
 
-        if (state.hasRolled) {
+        if (state.hasRolled && state.allowRerolls && !isUnlimited) {
             Text(
                 text = "${state.rerollsLeft} reroll${if (state.rerollsLeft != 1) "s" else ""} left",
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (state.rerollsLeft > 0) AccentTeal else TextSecondary,
             )
-        } else {
+        } else if (!state.hasRolled) {
             Text(
                 text = "Tap roll to discover your day",
                 style = MaterialTheme.typography.bodyMedium,
@@ -98,10 +97,13 @@ fun RollScreen(viewModel: RollViewModel = hiltViewModel()) {
                 }
             } else {
                 state.results.forEachIndexed { index, result ->
-                    RollCard(
+                    val showReroll = state.allowRerolls && state.allowPartialRerolls
+                            && state.rerollsLeft > 0 && result.item != null
+                    AnimatedRollCard(
                         label = result.label,
                         item = result.item,
-                        canReroll = state.rerollsLeft > 0,
+                        index = index,
+                        showReroll = showReroll,
                         onReroll = { viewModel.reroll(index) },
                     )
                 }
@@ -121,160 +123,179 @@ fun RollScreen(viewModel: RollViewModel = hiltViewModel()) {
             ) {
                 Text("Roll the day", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = DarkBackground)
             }
-        } else {
-            LongPressButton(
-                text = "Reroll all",
-                enabled = state.rerollsLeft > 0,
-                onComplete = { viewModel.rollAll() },
-            )
+        } else if (state.allowRerolls) {
+            Button(
+                onClick = { viewModel.rollAll() },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AccentGold,
+                    disabledContainerColor = AccentGold.copy(alpha = 0.2f),
+                ),
+                shape = RoundedCornerShape(16.dp),
+                enabled = canRerollAll,
+            ) {
+                Text(
+                    text = if (canRerollAll) "Reroll all" else "No rerolls left",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (canRerollAll) DarkBackground else TextSecondary,
+                )
+            }
         }
         Spacer(Modifier.height(24.dp))
     }
 }
 
 @Composable
-private fun LongPressButton(
-    text: String,
-    enabled: Boolean,
-    onComplete: () -> Unit,
+private fun AnimatedRollCard(
+    label: String,
+    item: Item?,
+    index: Int,
+    showReroll: Boolean,
+    onReroll: () -> Unit,
 ) {
-    val progress = remember { Animatable(0f) }
-    var pressing by remember { mutableStateOf(false) }
+    val offsetX = remember { Animatable(300f) }
+    val alpha = remember { Animatable(0f) }
 
-    LaunchedEffect(pressing) {
-        if (pressing) {
-            progress.snapTo(0f)
-            val result = progress.animateTo(1f, tween(LONG_PRESS_DURATION_MS, easing = LinearEasing))
-            if (result.endReason == androidx.compose.animation.core.AnimationEndReason.Finished) {
-                onComplete()
-            }
-        } else {
-            progress.snapTo(0f)
-        }
+    LaunchedEffect(Unit) {
+        delay(index * 80L)
+        launch { offsetX.animateTo(0f, tween(400, easing = LinearOutSlowInEasing)) }
+        launch { alpha.animateTo(1f, tween(300)) }
     }
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(AccentGold.copy(alpha = 0.2f))
-            .pointerInput(enabled) {
-                if (!enabled) return@pointerInput
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    down.consume()
-                    pressing = true
-                    try {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            if (event.changes.all { !it.pressed }) break
-                            event.changes.forEach { it.consume() }
-                        }
-                    } finally {
-                        pressing = false
-                    }
-                }
-            }
-            .drawBehind {
-                drawRect(
-                    color = AccentGold,
-                    topLeft = Offset.Zero,
-                    size = Size(size.width * progress.value, size.height),
-                )
-            },
-        contentAlignment = Alignment.Center,
+            .offset(x = offsetX.value.dp)
+            .then(Modifier.fillMaxWidth()),
     ) {
-        Text(
-            text = if (enabled) text else "No rerolls left",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = DarkBackground,
+        RollCard(
+            label = label,
+            item = item,
+            showReroll = showReroll,
+            onReroll = onReroll,
+            alpha = alpha.value,
         )
     }
 }
 
 @Composable
-fun RollCard(label: String, item: Item?, canReroll: Boolean = false, onReroll: (() -> Unit)? = null) {
+fun RollCard(
+    label: String,
+    item: Item?,
+    showReroll: Boolean = false,
+    onReroll: (() -> Unit)? = null,
+    alpha: Float = 1f,
+) {
     val rarityColor = item?.rarity?.color() ?: TextSecondary
-    val progress = remember { Animatable(0f) }
-    val interactive = canReroll && onReroll != null && item != null
-    var pressing by remember { mutableStateOf(false) }
-
-    LaunchedEffect(pressing) {
-        if (pressing && interactive) {
-            progress.snapTo(0f)
-            val result = progress.animateTo(1f, tween(LONG_PRESS_DURATION_MS, easing = LinearEasing))
-            if (result.endReason == androidx.compose.animation.core.AnimationEndReason.Finished) {
-                onReroll!!()
-            }
-        } else {
-            progress.snapTo(0f)
-        }
-    }
+    val glowLevel = item?.rarity?.glowLevel() ?: 0f
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(140.dp)
+            .height(120.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(DarkSurface)
+            .then(
+                if (glowLevel > 0f) {
+                    val edgeAlpha = glowLevel * 0.12f * alpha
+                    val glowInset = 20f // same spread for all rarities
+                    Modifier.drawWithContent {
+                        drawContent()
+                        // Top edge glow
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(rarityColor.copy(alpha = edgeAlpha), Color.Transparent),
+                                startY = 0f,
+                                endY = glowInset * density,
+                            ),
+                        )
+                        // Bottom edge glow
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, rarityColor.copy(alpha = edgeAlpha)),
+                                startY = size.height - glowInset * density,
+                                endY = size.height,
+                            ),
+                        )
+                        // Left edge glow
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(rarityColor.copy(alpha = edgeAlpha), Color.Transparent),
+                                startX = 0f,
+                                endX = glowInset * density,
+                            ),
+                        )
+                        // Right edge glow
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(Color.Transparent, rarityColor.copy(alpha = edgeAlpha)),
+                                startX = size.width - glowInset * density,
+                                endX = size.width,
+                            ),
+                        )
+                    }
+                } else Modifier
+            )
             .border(
                 width = 1.dp,
-                brush = Brush.linearGradient(listOf(rarityColor.copy(alpha = 0.6f), rarityColor.copy(alpha = 0.1f))),
+                brush = Brush.linearGradient(listOf(rarityColor.copy(alpha = 0.6f * alpha), rarityColor.copy(alpha = 0.1f * alpha))),
                 shape = RoundedCornerShape(20.dp),
-            )
-            .pointerInput(interactive) {
-                if (!interactive) return@pointerInput
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    down.consume()
-                    pressing = true
-                    try {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            if (event.changes.all { !it.pressed }) break
-                            event.changes.forEach { it.consume() }
-                        }
-                    } finally {
-                        pressing = false
-                    }
-                }
-            }
-            .drawBehind {
-                if (progress.value > 0f) {
-                    drawRect(
-                        color = rarityColor.copy(alpha = 0.15f),
-                        topLeft = Offset.Zero,
-                        size = Size(size.width * progress.value, size.height),
-                    )
-                }
-            },
+            ),
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(20.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
-                text = label.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                letterSpacing = 2.sp,
-                color = TextSecondary,
-            )
-            if (item != null) {
+            // Top row: category label (left) + rarity badge (right)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = TextPrimary,
+                    text = label.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    letterSpacing = 2.sp,
+                    color = TextSecondary,
                 )
-                RarityBadge(item.rarity)
+                if (item != null) {
+                    RarityBadge(item.rarity)
+                }
+            }
+
+            // Item name + reroll button
+            if (item != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = TextPrimary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (showReroll && onReroll != null) {
+                        IconButton(
+                            onClick = onReroll,
+                            modifier = Modifier.size(36.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = "Reroll",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                }
             } else {
                 Text(
                     text = "\u2014",
                     style = MaterialTheme.typography.headlineMedium,
                     color = TextSecondary,
                 )
-                Spacer(Modifier.height(20.dp))
             }
         }
     }
@@ -346,3 +367,12 @@ fun Rarity.color(): Color = when (this) {
     Rarity.RARE -> RarityRare
     Rarity.LEGENDARY -> RarityLegendary
 }
+
+/** Returns glow intensity (0 = none). Higher rarity = brighter glow, same spread. */
+fun Rarity.glowLevel(): Float = when (this) {
+    Rarity.COMMON -> 0f
+    Rarity.UNCOMMON -> 1f
+    Rarity.RARE -> 2f
+    Rarity.LEGENDARY -> 3f
+}
+

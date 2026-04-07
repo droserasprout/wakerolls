@@ -28,7 +28,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         Text("Settings", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(24.dp))
 
-        // Rerolls per day
+        // Allow rerolls toggle
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -38,29 +38,81 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text("Rerolls per day", style = MaterialTheme.typography.titleMedium)
-                Text("Long-press cards or button to reroll", style = MaterialTheme.typography.bodyMedium)
+                Text("Allow rerolls", style = MaterialTheme.typography.titleMedium)
+                Text("Re-roll your results after the first roll", style = MaterialTheme.typography.bodyMedium)
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = { viewModel.setRerollsPerDay((state.rerollsPerDay - 1).coerceAtLeast(0)) },
-                    enabled = state.rerollsPerDay > 0,
-                ) {
-                    Text("\u2212", style = MaterialTheme.typography.titleLarge,
-                        color = if (state.rerollsPerDay > 0) TextPrimary else TextSecondary)
+            Switch(
+                checked = state.allowRerolls,
+                onCheckedChange = { viewModel.setAllowRerolls(it) },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = AccentGold,
+                    checkedTrackColor = AccentGold.copy(alpha = 0.4f),
+                ),
+            )
+        }
+
+        if (state.allowRerolls) {
+            Spacer(Modifier.height(12.dp))
+
+            // Rerolls per day
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(DarkSurface)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Rerolls per day", style = MaterialTheme.typography.titleMedium)
+                    Text("How many rerolls you get each day", style = MaterialTheme.typography.bodyMedium)
                 }
-                Text(
-                    text = state.rerollsPerDay.toString(),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = AccentGold,
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { viewModel.setRerollsPerDay((state.rerollsPerDay - 1).coerceAtLeast(0)) },
+                        enabled = state.rerollsPerDay > 0,
+                    ) {
+                        Text("\u2212", style = MaterialTheme.typography.titleLarge,
+                            color = if (state.rerollsPerDay > 0) TextPrimary else TextSecondary)
+                    }
+                    Text(
+                        text = if (state.rerollsPerDay == 0) "\u221E" else state.rerollsPerDay.toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = AccentGold,
+                    )
+                    IconButton(
+                        onClick = { viewModel.setRerollsPerDay(state.rerollsPerDay + 1) },
+                        enabled = state.rerollsPerDay < 10,
+                    ) {
+                        Text("+", style = MaterialTheme.typography.titleLarge,
+                            color = if (state.rerollsPerDay < 10) TextPrimary else TextSecondary)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Allow partial rerolls toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(DarkSurface)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Allow partial rerolls", style = MaterialTheme.typography.titleMedium)
+                    Text("Re-roll individual cards", style = MaterialTheme.typography.bodyMedium)
+                }
+                Switch(
+                    checked = state.allowPartialRerolls,
+                    onCheckedChange = { viewModel.setAllowPartialRerolls(it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = AccentGold,
+                        checkedTrackColor = AccentGold.copy(alpha = 0.4f),
+                    ),
                 )
-                IconButton(
-                    onClick = { viewModel.setRerollsPerDay(state.rerollsPerDay + 1) },
-                    enabled = state.rerollsPerDay < 10,
-                ) {
-                    Text("+", style = MaterialTheme.typography.titleLarge,
-                        color = if (state.rerollsPerDay < 10) TextPrimary else TextSecondary)
-                }
             }
         }
 

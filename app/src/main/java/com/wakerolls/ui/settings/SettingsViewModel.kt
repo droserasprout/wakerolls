@@ -24,6 +24,8 @@ data class SettingsUiState(
     val notificationHour: Int = 8,
     val notificationMinute: Int = 0,
     val rerollsPerDay: Int = 3,
+    val allowRerolls: Boolean = true,
+    val allowPartialRerolls: Boolean = true,
 )
 
 @HiltViewModel
@@ -39,6 +41,8 @@ class SettingsViewModel @Inject constructor(
         val KEY_REROLLS_PER_DAY = intPreferencesKey("rerolls_per_day")
         val KEY_REROLLS_USED = intPreferencesKey("rerolls_used")
         val KEY_REROLLS_DATE = stringPreferencesKey("rerolls_date")
+        val KEY_ALLOW_REROLLS = booleanPreferencesKey("allow_rerolls")
+        val KEY_ALLOW_PARTIAL_REROLLS = booleanPreferencesKey("allow_partial_rerolls")
     }
 
     val uiState: StateFlow<SettingsUiState> = dataStore.data
@@ -48,6 +52,8 @@ class SettingsViewModel @Inject constructor(
                 notificationHour = prefs[KEY_NOTIF_HOUR] ?: 8,
                 notificationMinute = prefs[KEY_NOTIF_MINUTE] ?: 0,
                 rerollsPerDay = prefs[KEY_REROLLS_PER_DAY] ?: 3,
+                allowRerolls = prefs[KEY_ALLOW_REROLLS] ?: true,
+                allowPartialRerolls = prefs[KEY_ALLOW_PARTIAL_REROLLS] ?: true,
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
@@ -67,6 +73,18 @@ class SettingsViewModel @Inject constructor(
     fun setRerollsPerDay(count: Int) {
         viewModelScope.launch {
             dataStore.edit { it[KEY_REROLLS_PER_DAY] = count }
+        }
+    }
+
+    fun setAllowRerolls(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStore.edit { it[KEY_ALLOW_REROLLS] = enabled }
+        }
+    }
+
+    fun setAllowPartialRerolls(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStore.edit { it[KEY_ALLOW_PARTIAL_REROLLS] = enabled }
         }
     }
 

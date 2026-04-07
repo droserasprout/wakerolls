@@ -10,6 +10,8 @@ import com.wakerolls.data.repository.ScenarioRepository
 import com.wakerolls.domain.model.Item
 import com.wakerolls.domain.model.Rarity
 import com.wakerolls.domain.model.Scenario
+import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_ALLOW_PARTIAL_REROLLS
+import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_ALLOW_REROLLS
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_REROLLS_DATE
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_REROLLS_PER_DAY
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_REROLLS_USED
@@ -37,6 +39,8 @@ data class RollUiState(
     val hasRolled: Boolean = false,
     val rerollsLeft: Int = 3,
     val rerollsPerDay: Int = 3,
+    val allowRerolls: Boolean = true,
+    val allowPartialRerolls: Boolean = true,
 )
 
 @HiltViewModel
@@ -67,12 +71,17 @@ class RollViewModel @Inject constructor(
         viewModelScope.launch {
             dataStore.data.collect { prefs ->
                 val perDay = prefs[KEY_REROLLS_PER_DAY] ?: 3
+                val allowRerolls = prefs[KEY_ALLOW_REROLLS] ?: true
+                val allowPartialRerolls = prefs[KEY_ALLOW_PARTIAL_REROLLS] ?: true
                 val today = LocalDate.now().toString()
                 val storedDate = prefs[KEY_REROLLS_DATE] ?: ""
                 val used = if (storedDate == today) (prefs[KEY_REROLLS_USED] ?: 0) else 0
+                val rerollsLeft = if (perDay == 0) Int.MAX_VALUE else (perDay - used).coerceAtLeast(0)
                 _uiState.value = _uiState.value.copy(
                     rerollsPerDay = perDay,
-                    rerollsLeft = (perDay - used).coerceAtLeast(0),
+                    rerollsLeft = rerollsLeft,
+                    allowRerolls = allowRerolls,
+                    allowPartialRerolls = allowPartialRerolls,
                 )
             }
         }
@@ -87,7 +96,7 @@ class RollViewModel @Inject constructor(
         val scenario = state.scenarios.find { it.id == state.selectedScenarioId } ?: return
         // First roll is free; subsequent full rolls cost a reroll
         if (state.hasRolled) {
-            if (state.rerollsLeft <= 0) return
+            if (!state.allowRerolls || state.rerollsLeft <= 0) return
         }
         viewModelScope.launch {
             if (state.hasRolled) consumeReroll()
@@ -111,7 +120,7 @@ class RollViewModel @Inject constructor(
     }
 
     fun reroll(index: Int) {
-        if (_uiState.value.rerollsLeft <= 0) return
+        if (!_uiState.value.allowPartialRerolls || _uiState.value.rerollsLeft <= 0) return
         val current = _uiState.value.results.getOrNull(index) ?: return
         viewModelScope.launch {
             consumeReroll()
@@ -124,6 +133,7 @@ class RollViewModel @Inject constructor(
     }
 
     private suspend fun consumeReroll() {
+        if (_uiState.value.rerollsPerDay == 0) return // unlimited
         _uiState.value = _uiState.value.copy(rerollsLeft = (_uiState.value.rerollsLeft - 1).coerceAtLeast(0))
         val today = LocalDate.now().toString()
         dataStore.edit { prefs ->
