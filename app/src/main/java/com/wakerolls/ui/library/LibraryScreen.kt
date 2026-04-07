@@ -122,6 +122,9 @@ fun LibraryScreen(padding: PaddingValues, viewModel: LibraryViewModel = hiltView
             scenario = editScenario,
             categories = state.categories,
             onSave = { viewModel.onSaveScenario(it) },
+            onDelete = if (editScenario.id != 0L) {
+                { viewModel.onDeleteScenarioClick(editScenario); viewModel.onDismissScenarioEdit() }
+            } else null,
             onDismiss = { viewModel.onDismissScenarioEdit() },
         )
     }
@@ -223,14 +226,11 @@ private fun LibraryItemRow(item: Item, onEdit: () -> Unit, onToggle: () -> Unit)
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(DarkSurface)
+            .clickable { onEdit() }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
-            Modifier
-                .weight(1f)
-                .clickable { onEdit() },
-        ) {
+        Column(Modifier.weight(1f)) {
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.titleMedium,

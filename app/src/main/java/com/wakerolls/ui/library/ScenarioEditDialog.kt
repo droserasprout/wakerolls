@@ -20,6 +20,7 @@ fun ScenarioEditDialog(
     scenario: Scenario,
     categories: List<String>,
     onSave: (Scenario) -> Unit,
+    onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
     var name by remember { mutableStateOf(scenario.name) }
@@ -99,7 +100,14 @@ fun ScenarioEditDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            Row {
+                if (onDelete != null) {
+                    TextButton(onClick = onDelete) {
+                        Text("Delete", color = AccentCoral)
+                    }
+                }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
         },
         containerColor = DarkSurface,
     )

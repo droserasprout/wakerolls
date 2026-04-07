@@ -3,13 +3,13 @@ package com.wakerolls.ui.roll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,25 +48,14 @@ fun RollScreen(padding: PaddingValues, viewModel: RollViewModel = hiltViewModel(
             style = MaterialTheme.typography.bodyMedium,
         )
 
-        // Scenario selector chips
-        if (state.scenarios.size > 1) {
+        // Scenario selector dropdown
+        if (state.scenarios.isNotEmpty()) {
             Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                state.scenarios.forEach { scenario ->
-                    FilterChip(
-                        selected = scenario.id == state.selectedScenarioId,
-                        onClick = { viewModel.selectScenario(scenario.id) },
-                        label = { Text(scenario.name) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = AccentGold.copy(alpha = 0.2f),
-                            selectedLabelColor = AccentGold,
-                        ),
-                    )
-                }
-            }
+            ScenarioDropdown(
+                scenarios = state.scenarios,
+                selectedId = state.selectedScenarioId,
+                onSelect = { viewModel.selectScenario(it) },
+            )
         }
 
         Spacer(Modifier.height(24.dp))
@@ -182,6 +171,50 @@ fun RarityBadge(rarity: Rarity) {
             style = MaterialTheme.typography.labelSmall,
             color = color,
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ScenarioDropdown(
+    scenarios: List<com.wakerolls.domain.model.Scenario>,
+    selectedId: Long?,
+    onSelect: (Long) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selected = scenarios.find { it.id == selectedId }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = selected?.name ?: "",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Scenario") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = AccentGold,
+                focusedLabelColor = AccentGold,
+            ),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = DarkSurfaceVariant,
+        ) {
+            scenarios.forEach { scenario ->
+                DropdownMenuItem(
+                    text = { Text(scenario.name, color = TextPrimary) },
+                    onClick = {
+                        onSelect(scenario.id)
+                        expanded = false
+                    },
+                )
+            }
+        }
     }
 }
 

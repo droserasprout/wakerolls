@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.wakerolls.domain.model.Item
 import com.wakerolls.domain.model.Rarity
+import com.wakerolls.ui.roll.color
 import com.wakerolls.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -92,14 +93,29 @@ fun ItemEditDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Rarity.entries.forEach { r ->
+                        val rarityColor = r.color()
                         FilterChip(
                             selected = rarity == r,
                             onClick = { rarity = r },
                             label = { Text(r.name) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = AccentGold.copy(alpha = 0.2f),
-                                selectedLabelColor = AccentGold,
+                                selectedContainerColor = rarityColor.copy(alpha = 0.15f),
+                                selectedLabelColor = rarityColor,
+                                labelColor = TextSecondary,
                             ),
+                            border = if (rarity == r) {
+                                FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = true,
+                                    borderColor = rarityColor.copy(alpha = 0.5f),
+                                    selectedBorderColor = rarityColor.copy(alpha = 0.5f),
+                                )
+                            } else {
+                                FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = false,
+                                )
+                            },
                         )
                     }
                 }
