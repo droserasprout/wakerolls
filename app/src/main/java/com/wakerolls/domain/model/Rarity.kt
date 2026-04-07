@@ -1,9 +1,9 @@
 package com.wakerolls.domain.model
 
 enum class Rarity(val weight: Int) {
-    COMMON(6),
-    UNCOMMON(3),
-    RARE(1),
+    COMMON(10),
+    UNCOMMON(6),
+    RARE(3),
     LEGENDARY(1);
 
     companion object {
