@@ -60,7 +60,7 @@ class LibraryViewModel @Inject constructor(
             ItemSortMode.RARITY -> items.sortedBy { it.rarity.ordinal }
         }
         LibraryUiState(
-            grouped = sorted.groupBy { it.category },
+            grouped = sorted.groupBy { it.category }.toSortedMap(String.CASE_INSENSITIVE_ORDER),
             categories = categories,
             sortMode = sortMode,
             collapsedCategories = collapsed,
