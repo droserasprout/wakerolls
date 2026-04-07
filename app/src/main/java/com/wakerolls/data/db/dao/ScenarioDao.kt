@@ -31,6 +31,16 @@ interface ScenarioDao {
     @Query("DELETE FROM scenarios WHERE id = :id")
     suspend fun deleteScenario(id: Long)
 
+    @Transaction
+    @Query("SELECT * FROM scenarios ORDER BY name")
+    suspend fun getAll(): List<ScenarioWithSlots>
+
+    @Query("DELETE FROM scenario_slots")
+    suspend fun deleteAllSlots()
+
+    @Query("DELETE FROM scenarios")
+    suspend fun deleteAllScenarios()
+
     @Query("SELECT COUNT(*) FROM scenarios")
     suspend fun count(): Int
 }

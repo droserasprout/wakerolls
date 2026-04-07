@@ -1,5 +1,9 @@
 package com.wakerolls.ui.settings
 
+import android.app.Activity
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,6 +25,14 @@ import com.wakerolls.ui.theme.*
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showTimePicker by remember { mutableStateOf(false) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> uri?.let { viewModel.exportData(it) } }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> uri?.let { viewModel.importData(it) } }
 
     Column(
         modifier = Modifier
@@ -183,6 +195,25 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             }
         }
 
+        // ── Data ──
+        SectionHeader("Data")
+
+        SettingsRow {
+            Text("Export", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = { exportLauncher.launch("wakerolls.json") }) {
+                Text("Export JSON", color = AccentGold)
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        SettingsRow {
+            Text("Import", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) }) {
+                Text("Import JSON", color = AccentGold)
+            }
+        }
+
         Spacer(Modifier.height(24.dp))
 
         if (showTimePicker) {
@@ -194,6 +225,19 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     showTimePicker = false
                 },
                 onDismiss = { showTimePicker = false },
+            )
+        }
+
+        state.importExportMessage?.let { message ->
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissImportExportMessage() },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissImportExportMessage() }) {
+                        Text("OK", color = AccentGold)
+                    }
+                },
+                text = { Text(message, color = TextPrimary) },
+                containerColor = DarkSurface,
             )
         }
     }

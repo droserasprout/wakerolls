@@ -32,8 +32,15 @@ class ScenarioRepository @Inject constructor(private val dao: ScenarioDao) {
         return scenarioId
     }
 
+    suspend fun getAll(): List<Scenario> = dao.getAll().map { it.toDomain() }
+
     suspend fun delete(id: Long) {
         dao.deleteScenario(id)
+    }
+
+    suspend fun deleteAll() {
+        dao.deleteAllSlots()
+        dao.deleteAllScenarios()
     }
 
     suspend fun seedIfEmpty(scenarios: List<Scenario>) {

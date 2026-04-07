@@ -26,7 +26,13 @@ class ItemRepository @Inject constructor(private val dao: ItemDao) {
 
     suspend fun update(item: Item) { dao.update(ItemEntity.fromDomain(item)) }
 
+    suspend fun getAll(): List<Item> = dao.getAll().map { it.toDomain() }
+
     suspend fun delete(item: Item) { dao.delete(ItemEntity.fromDomain(item)) }
+
+    suspend fun deleteAll() { dao.deleteAll() }
+
+    suspend fun insertAll(items: List<Item>) { dao.insertAll(items.map { ItemEntity.fromDomain(it) }) }
 
     suspend fun seedIfEmpty(items: List<Item>) {
         if (dao.count() == 0) {

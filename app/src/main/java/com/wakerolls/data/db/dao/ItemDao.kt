@@ -30,6 +30,12 @@ interface ItemDao {
     @Delete
     suspend fun delete(item: ItemEntity)
 
+    @Query("SELECT * FROM items ORDER BY category, name")
+    suspend fun getAll(): List<ItemEntity>
+
+    @Query("DELETE FROM items")
+    suspend fun deleteAll()
+
     @Query("SELECT COUNT(*) FROM items")
     suspend fun count(): Int
 }
