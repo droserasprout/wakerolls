@@ -1,5 +1,8 @@
 package com.wakerolls.ui.roll
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wakerolls.data.repository.ItemRepository
@@ -7,12 +10,17 @@ import com.wakerolls.data.repository.ScenarioRepository
 import com.wakerolls.domain.model.Item
 import com.wakerolls.domain.model.Rarity
 import com.wakerolls.domain.model.Scenario
+import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_REROLLS_DATE
+import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_REROLLS_PER_DAY
+import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_REROLLS_USED
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 data class RollResult(
@@ -26,12 +34,16 @@ data class RollUiState(
     val selectedScenarioId: Long? = null,
     val results: List<RollResult> = emptyList(),
     val isRolling: Boolean = false,
+    val hasRolled: Boolean = false,
+    val rerollsLeft: Int = 3,
+    val rerollsPerDay: Int = 3,
 )
 
 @HiltViewModel
 class RollViewModel @Inject constructor(
     private val itemRepository: ItemRepository,
     private val scenarioRepository: ScenarioRepository,
+    private val dataStore: DataStore<Preferences>,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RollUiState())
@@ -52,55 +64,73 @@ class RollViewModel @Inject constructor(
                 )
             }
         }
+        viewModelScope.launch {
+            dataStore.data.collect { prefs ->
+                val perDay = prefs[KEY_REROLLS_PER_DAY] ?: 3
+                val today = LocalDate.now().toString()
+                val storedDate = prefs[KEY_REROLLS_DATE] ?: ""
+                val used = if (storedDate == today) (prefs[KEY_REROLLS_USED] ?: 0) else 0
+                _uiState.value = _uiState.value.copy(
+                    rerollsPerDay = perDay,
+                    rerollsLeft = (perDay - used).coerceAtLeast(0),
+                )
+            }
+        }
     }
 
     fun selectScenario(id: Long) {
-        _uiState.value = _uiState.value.copy(selectedScenarioId = id, results = emptyList())
+        _uiState.value = _uiState.value.copy(selectedScenarioId = id, results = emptyList(), hasRolled = false)
     }
 
     fun rollAll() {
-        val scenario = _uiState.value.scenarios.find { it.id == _uiState.value.selectedScenarioId } ?: return
+        val state = _uiState.value
+        val scenario = state.scenarios.find { it.id == state.selectedScenarioId } ?: return
+        // First roll is free; subsequent full rolls cost a reroll
+        if (state.hasRolled) {
+            if (state.rerollsLeft <= 0) return
+        }
         viewModelScope.launch {
+            if (state.hasRolled) consumeReroll()
             _uiState.value = _uiState.value.copy(isRolling = true)
             val results = mutableListOf<RollResult>()
             for (slot in scenario.slots) {
                 val items = pickMultiple(slot.category, slot.count)
                 if (slot.count == 1) {
-                    results.add(RollResult(
-                        label = slot.category,
-                        category = slot.category,
-                        item = items.firstOrNull(),
-                    ))
+                    results.add(RollResult(label = slot.category, category = slot.category, item = items.firstOrNull()))
                 } else {
                     items.forEachIndexed { index, item ->
-                        results.add(RollResult(
-                            label = "${slot.category} #${index + 1}",
-                            category = slot.category,
-                            item = item,
-                        ))
+                        results.add(RollResult(label = "${slot.category} #${index + 1}", category = slot.category, item = item))
                     }
-                    // Fill remaining slots if fewer items than count
                     repeat(slot.count - items.size) { i ->
-                        results.add(RollResult(
-                            label = "${slot.category} #${items.size + i + 1}",
-                            category = slot.category,
-                            item = null,
-                        ))
+                        results.add(RollResult(label = "${slot.category} #${items.size + i + 1}", category = slot.category, item = null))
                     }
                 }
             }
-            _uiState.value = _uiState.value.copy(results = results, isRolling = false)
+            _uiState.value = _uiState.value.copy(results = results, isRolling = false, hasRolled = true)
         }
     }
 
     fun reroll(index: Int) {
+        if (_uiState.value.rerollsLeft <= 0) return
         val current = _uiState.value.results.getOrNull(index) ?: return
         viewModelScope.launch {
+            consumeReroll()
             val items = itemRepository.observeEnabled(current.category).first()
             val picked = if (items.isEmpty()) null else Rarity.weightedRandom(items) { it.rarity }
             val updated = _uiState.value.results.toMutableList()
             updated[index] = current.copy(item = picked)
             _uiState.value = _uiState.value.copy(results = updated)
+        }
+    }
+
+    private suspend fun consumeReroll() {
+        _uiState.value = _uiState.value.copy(rerollsLeft = (_uiState.value.rerollsLeft - 1).coerceAtLeast(0))
+        val today = LocalDate.now().toString()
+        dataStore.edit { prefs ->
+            val storedDate = prefs[KEY_REROLLS_DATE] ?: ""
+            val used = if (storedDate == today) (prefs[KEY_REROLLS_USED] ?: 0) else 0
+            prefs[KEY_REROLLS_DATE] = today
+            prefs[KEY_REROLLS_USED] = used + 1
         }
     }
 

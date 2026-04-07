@@ -32,12 +32,26 @@ fun ItemsScreen(viewModel: LibraryViewModel = hiltViewModel()) {
     ) {
         Column {
             Spacer(Modifier.height(24.dp))
-            Text(
-                text = "Items",
-                style = MaterialTheme.typography.headlineLarge,
-                modifier = Modifier.padding(horizontal = 20.dp),
-            )
-            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Items",
+                    style = MaterialTheme.typography.headlineLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { viewModel.toggleSort() }) {
+                    Text(
+                        text = if (state.sortMode == ItemSortMode.AZ) "A-Z" else "Rarity",
+                        color = AccentGold,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
             LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
                 state.grouped.forEach { (category, items) ->
                     item {

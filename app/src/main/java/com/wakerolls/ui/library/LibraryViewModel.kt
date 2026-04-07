@@ -17,9 +17,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class ItemSortMode { AZ, RARITY }
+
 data class LibraryUiState(
     val grouped: Map<String, List<Item>> = emptyMap(),
     val categories: List<String> = emptyList(),
+    val sortMode: ItemSortMode = ItemSortMode.AZ,
     val editingItem: Item? = null,
     val showDeleteConfirm: Item? = null,
     val scenarios: List<Scenario> = emptyList(),
@@ -41,16 +44,23 @@ class LibraryViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _dialogState = MutableStateFlow(DialogState())
+    private val _sortMode = MutableStateFlow(ItemSortMode.AZ)
 
     val uiState: StateFlow<LibraryUiState> = combine(
         repository.observeAll(),
         repository.observeCategories(),
         scenarioRepository.observeAll(),
         _dialogState,
-    ) { items, categories, scenarios, dialog ->
+        _sortMode,
+    ) { items, categories, scenarios, dialog, sortMode ->
+        val sorted = when (sortMode) {
+            ItemSortMode.AZ -> items.sortedBy { it.name.lowercase() }
+            ItemSortMode.RARITY -> items.sortedBy { it.rarity.ordinal }
+        }
         LibraryUiState(
-            grouped = items.groupBy { it.category },
+            grouped = sorted.groupBy { it.category },
             categories = categories,
+            sortMode = sortMode,
             editingItem = dialog.editingItem,
             showDeleteConfirm = dialog.showDeleteConfirm,
             scenarios = scenarios,
@@ -58,6 +68,13 @@ class LibraryViewModel @Inject constructor(
             showDeleteScenarioConfirm = dialog.showDeleteScenarioConfirm,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
+
+    fun toggleSort() {
+        _sortMode.value = when (_sortMode.value) {
+            ItemSortMode.AZ -> ItemSortMode.RARITY
+            ItemSortMode.RARITY -> ItemSortMode.AZ
+        }
+    }
 
     fun toggleEnabled(item: Item) {
         viewModelScope.launch {

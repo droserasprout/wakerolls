@@ -2,6 +2,7 @@ package com.wakerolls.ui.library
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -10,6 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.wakerolls.domain.model.Scenario
 import com.wakerolls.domain.model.ScenarioSlot
 import com.wakerolls.ui.theme.*
@@ -28,21 +31,29 @@ fun ScenarioEditDialog(
 
     val canSave = name.isNotBlank() && slots.isNotEmpty() && slots.all { it.category.isNotBlank() }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                if (scenario.id == 0L) "Add Scenario" else "Edit Scenario",
-                color = TextPrimary,
-            )
-        },
-        text = {
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .padding(vertical = 24.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = DarkSurface,
+        ) {
             Column(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
-                    .fillMaxWidth(),
+                    .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                Text(
+                    if (scenario.id == 0L) "Add Scenario" else "Edit Scenario",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = TextPrimary,
+                )
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -87,30 +98,28 @@ fun ScenarioEditDialog(
                 ) {
                     Text("+ Add slot", color = AccentTeal)
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onSave(scenario.copy(name = name.trim(), slots = slots))
-                },
-                enabled = canSave,
-            ) {
-                Text("Save", color = if (canSave) AccentGold else TextSecondary)
-            }
-        },
-        dismissButton = {
-            Row {
-                if (onDelete != null) {
-                    TextButton(onClick = onDelete) {
-                        Text("Delete", color = AccentCoral)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    if (onDelete != null) {
+                        TextButton(onClick = onDelete) {
+                            Text("Delete", color = AccentCoral)
+                        }
+                        Spacer(Modifier.weight(1f))
+                    }
+                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(
+                        onClick = { onSave(scenario.copy(name = name.trim(), slots = slots)) },
+                        enabled = canSave,
+                    ) {
+                        Text("Save", color = if (canSave) AccentGold else TextSecondary)
                     }
                 }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
             }
-        },
-        containerColor = DarkSurface,
-    )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -183,7 +192,7 @@ private fun SlotRow(
                 enabled = slot.count > 1,
             ) {
                 Text(
-                    "−",
+                    "\u2212",
                     style = MaterialTheme.typography.titleLarge,
                     color = if (slot.count > 1) TextPrimary else TextSecondary,
                 )

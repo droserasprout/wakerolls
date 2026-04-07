@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wakerolls.worker.DailyRollWorker
@@ -22,6 +23,7 @@ data class SettingsUiState(
     val notificationsEnabled: Boolean = false,
     val notificationHour: Int = 8,
     val notificationMinute: Int = 0,
+    val rerollsPerDay: Int = 3,
 )
 
 @HiltViewModel
@@ -34,6 +36,9 @@ class SettingsViewModel @Inject constructor(
         val KEY_NOTIF_ENABLED = booleanPreferencesKey("notif_enabled")
         val KEY_NOTIF_HOUR = intPreferencesKey("notif_hour")
         val KEY_NOTIF_MINUTE = intPreferencesKey("notif_minute")
+        val KEY_REROLLS_PER_DAY = intPreferencesKey("rerolls_per_day")
+        val KEY_REROLLS_USED = intPreferencesKey("rerolls_used")
+        val KEY_REROLLS_DATE = stringPreferencesKey("rerolls_date")
     }
 
     val uiState: StateFlow<SettingsUiState> = dataStore.data
@@ -42,6 +47,7 @@ class SettingsViewModel @Inject constructor(
                 notificationsEnabled = prefs[KEY_NOTIF_ENABLED] ?: false,
                 notificationHour = prefs[KEY_NOTIF_HOUR] ?: 8,
                 notificationMinute = prefs[KEY_NOTIF_MINUTE] ?: 0,
+                rerollsPerDay = prefs[KEY_REROLLS_PER_DAY] ?: 3,
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
@@ -55,6 +61,12 @@ class SettingsViewModel @Inject constructor(
             } else {
                 DailyRollWorker.cancel(context)
             }
+        }
+    }
+
+    fun setRerollsPerDay(count: Int) {
+        viewModelScope.launch {
+            dataStore.edit { it[KEY_REROLLS_PER_DAY] = count }
         }
     }
 

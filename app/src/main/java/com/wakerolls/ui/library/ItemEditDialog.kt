@@ -1,10 +1,15 @@
 package com.wakerolls.ui.library
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.wakerolls.domain.model.Item
 import com.wakerolls.domain.model.Rarity
 import com.wakerolls.ui.roll.color
@@ -27,17 +32,31 @@ fun ItemEditDialog(
     val suggestions = categories.filter {
         it.contains(category, ignoreCase = true) && it != category
     }
+    val canSave = name.isNotBlank() && category.isNotBlank()
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                if (item.id == 0L) "Add Item" else "Edit Item",
-                color = TextPrimary,
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .padding(vertical = 24.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = DarkSurface,
+        ) {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    if (item.id == 0L) "Add Item" else "Edit Item",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = TextPrimary,
+                )
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -119,26 +138,26 @@ fun ItemEditDialog(
                         )
                     }
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onSave(item.copy(name = name.trim(), category = category.trim(), rarity = rarity)) },
-                enabled = name.isNotBlank() && category.isNotBlank(),
-            ) {
-                Text("Save", color = if (name.isNotBlank() && category.isNotBlank()) AccentGold else TextSecondary)
-            }
-        },
-        dismissButton = {
-            Row {
-                if (onDelete != null) {
-                    TextButton(onClick = onDelete) {
-                        Text("Delete", color = AccentCoral)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    if (onDelete != null) {
+                        TextButton(onClick = onDelete) {
+                            Text("Delete", color = AccentCoral)
+                        }
+                        Spacer(Modifier.weight(1f))
+                    }
+                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(
+                        onClick = { onSave(item.copy(name = name.trim(), category = category.trim(), rarity = rarity)) },
+                        enabled = canSave,
+                    ) {
+                        Text("Save", color = if (canSave) AccentGold else TextSecondary)
                     }
                 }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
             }
-        },
-        containerColor = DarkSurface,
-    )
+        }
+    }
 }

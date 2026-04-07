@@ -28,6 +28,44 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         Text("Settings", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(24.dp))
 
+        // Rerolls per day
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(DarkSurface)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Rerolls per day", style = MaterialTheme.typography.titleMedium)
+                Text("Long-press cards or button to reroll", style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = { viewModel.setRerollsPerDay((state.rerollsPerDay - 1).coerceAtLeast(0)) },
+                    enabled = state.rerollsPerDay > 0,
+                ) {
+                    Text("\u2212", style = MaterialTheme.typography.titleLarge,
+                        color = if (state.rerollsPerDay > 0) TextPrimary else TextSecondary)
+                }
+                Text(
+                    text = state.rerollsPerDay.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AccentGold,
+                )
+                IconButton(
+                    onClick = { viewModel.setRerollsPerDay(state.rerollsPerDay + 1) },
+                    enabled = state.rerollsPerDay < 10,
+                ) {
+                    Text("+", style = MaterialTheme.typography.titleLarge,
+                        color = if (state.rerollsPerDay < 10) TextPrimary else TextSecondary)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         // Notification toggle row
         Row(
             modifier = Modifier

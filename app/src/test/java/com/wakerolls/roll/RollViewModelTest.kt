@@ -1,5 +1,8 @@
 package com.wakerolls.roll
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
 import com.wakerolls.data.repository.ItemRepository
 import com.wakerolls.data.repository.ScenarioRepository
 import com.wakerolls.domain.model.Item
@@ -11,19 +14,26 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.Assert.*
+import org.junit.rules.TemporaryFolder
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RollViewModelTest {
 
-    private val testDispatcher = UnconfinedTestDispatcher()
+    @get:Rule val tmpFolder = TemporaryFolder()
+
+    private val testScope = TestScope(UnconfinedTestDispatcher() + Job())
     private val itemRepository = mockk<ItemRepository>()
     private val scenarioRepository = mockk<ScenarioRepository>()
+    private lateinit var dataStore: DataStore<Preferences>
 
     private val breakfast = Item(1L, "Eggs", "Breakfast", Rarity.COMMON)
     private val porridge = Item(3L, "Porridge", "Breakfast", Rarity.UNCOMMON)
@@ -49,18 +59,24 @@ class RollViewModelTest {
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(testDispatcher)
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        dataStore = PreferenceDataStoreFactory.create(
+            scope = testScope,
+        ) { tmpFolder.newFile("test_prefs_${System.nanoTime()}.preferences_pb") }
         every { itemRepository.observeEnabled("Breakfast") } returns flowOf(listOf(breakfast, porridge))
         every { itemRepository.observeEnabled("Activity") } returns flowOf(listOf(activity))
         every { scenarioRepository.observeAll() } returns flowOf(listOf(dayScenario, bigScenario))
     }
 
     @After
-    fun tearDown() { Dispatchers.resetMain() }
+    fun tearDown() {
+        testScope.cancel()
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun `initial state auto-selects first scenario`() = runTest {
-        val vm = RollViewModel(itemRepository, scenarioRepository)
+        val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
         assertEquals(1L, vm.uiState.value.selectedScenarioId)
         assertEquals(2, vm.uiState.value.scenarios.size)
         assertTrue(vm.uiState.value.results.isEmpty())
@@ -68,7 +84,7 @@ class RollViewModelTest {
 
     @Test
     fun `rollAll produces results matching scenario slots`() = runTest {
-        val vm = RollViewModel(itemRepository, scenarioRepository)
+        val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
         vm.rollAll()
         val results = vm.uiState.value.results
         assertEquals(2, results.size)
@@ -80,7 +96,7 @@ class RollViewModelTest {
 
     @Test
     fun `rollAll with count 2 produces numbered results`() = runTest {
-        val vm = RollViewModel(itemRepository, scenarioRepository)
+        val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
         vm.selectScenario(2L)
         vm.rollAll()
         val results = vm.uiState.value.results
@@ -93,7 +109,7 @@ class RollViewModelTest {
 
     @Test
     fun `reroll replaces only targeted result`() = runTest {
-        val vm = RollViewModel(itemRepository, scenarioRepository)
+        val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
         vm.rollAll()
         val original = vm.uiState.value.results.toList()
         vm.reroll(0)
@@ -102,8 +118,20 @@ class RollViewModelTest {
     }
 
     @Test
+    fun `first roll is free, subsequent rerolls consume budget`() = runTest {
+        val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
+        vm.rollAll() // first roll is free
+        assertTrue(vm.uiState.value.hasRolled)
+        val initialRerolls = vm.uiState.value.rerollsLeft
+        vm.reroll(0) // costs 1
+        assertEquals(initialRerolls - 1, vm.uiState.value.rerollsLeft)
+        vm.rollAll() // full reroll costs 1
+        assertEquals(initialRerolls - 2, vm.uiState.value.rerollsLeft)
+    }
+
+    @Test
     fun `selectScenario clears results`() = runTest {
-        val vm = RollViewModel(itemRepository, scenarioRepository)
+        val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
         vm.rollAll()
         assertTrue(vm.uiState.value.results.isNotEmpty())
         vm.selectScenario(2L)
