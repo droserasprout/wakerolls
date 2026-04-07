@@ -1,5 +1,6 @@
 package com.wakerolls.ui.settings
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -7,7 +8,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wakerolls.worker.DailyRollWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -24,6 +27,7 @@ data class SettingsUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val dataStore: DataStore<Preferences>,
+    @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     companion object {
@@ -45,6 +49,12 @@ class SettingsViewModel @Inject constructor(
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             dataStore.edit { it[KEY_NOTIF_ENABLED] = enabled }
+            val current = uiState.value
+            if (enabled) {
+                DailyRollWorker.scheduleDaily(context, current.notificationHour, current.notificationMinute)
+            } else {
+                DailyRollWorker.cancel(context)
+            }
         }
     }
 
@@ -53,6 +63,9 @@ class SettingsViewModel @Inject constructor(
             dataStore.edit {
                 it[KEY_NOTIF_HOUR] = hour
                 it[KEY_NOTIF_MINUTE] = minute
+            }
+            if (uiState.value.notificationsEnabled) {
+                DailyRollWorker.scheduleDaily(context, hour, minute)
             }
         }
     }
