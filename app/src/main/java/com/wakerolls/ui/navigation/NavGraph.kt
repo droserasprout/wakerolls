@@ -9,16 +9,24 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import com.wakerolls.ui.library.ItemsScreen
 import com.wakerolls.ui.library.ScenariosScreen
 import com.wakerolls.ui.roll.RollScreen
 import com.wakerolls.ui.settings.SettingsScreen
 import com.wakerolls.ui.theme.DarkSurface
+import com.wakerolls.ui.welcome.WelcomeScreen
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+
+private val KEY_WELCOME_SEEN = booleanPreferencesKey("welcome_seen")
 
 data class Page(val label: String, val icon: ImageVector)
 
@@ -30,7 +38,28 @@ val pages = listOf(
 )
 
 @Composable
-fun WakerollsNavGraph() {
+fun WakerollsNavGraph(dataStore: DataStore<Preferences>) {
+    var showWelcome by remember { mutableStateOf<Boolean?>(null) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        showWelcome = !(dataStore.data.first()[KEY_WELCOME_SEEN] ?: false)
+    }
+
+    when (showWelcome) {
+        null -> {} // loading
+        true -> WelcomeScreen(onGetStarted = {
+            scope.launch {
+                dataStore.edit { it[KEY_WELCOME_SEEN] = true }
+                showWelcome = false
+            }
+        })
+        false -> MainPager()
+    }
+}
+
+@Composable
+private fun MainPager() {
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
 
