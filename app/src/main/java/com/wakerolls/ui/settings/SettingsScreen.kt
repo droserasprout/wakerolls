@@ -218,16 +218,30 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         // ── Data ──
         SectionHeader("Data")
 
-        SettingsRow {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(DarkSurface)
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text("Export", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             TextButton(onClick = { exportLauncher.launch("wakerolls.json") }) {
                 Text("Export JSON", color = AccentGold)
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
 
-        SettingsRow {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(DarkSurface)
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text("Import", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             TextButton(onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) }) {
                 Text("Import JSON", color = AccentGold)
