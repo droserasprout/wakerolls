@@ -112,7 +112,7 @@ fun RollScreen(viewModel: RollViewModel = hiltViewModel()) {
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AccentGold),
                 shape = RoundedCornerShape(16.dp),
-                enabled = state.selectedScenarioId != null,
+                enabled = state.selectedScenarioId != null && !state.isRolling,
             ) {
                 Text("Roll the day", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = DarkBackground)
             }
@@ -125,7 +125,7 @@ fun RollScreen(viewModel: RollViewModel = hiltViewModel()) {
                     disabledContainerColor = AccentGold.copy(alpha = 0.2f),
                 ),
                 shape = RoundedCornerShape(16.dp),
-                enabled = canRerollAll,
+                enabled = canRerollAll && !state.isRolling,
             ) {
                 Text(
                     text = if (canRerollAll) "Reroll all" else "No rerolls left",
@@ -155,8 +155,8 @@ private fun AnimatedRollCard(
     // Intro: grow from center
     LaunchedEffect(Unit) {
         if (animate) {
-            delay(index * 60L)
-            scale.animateTo(1f, tween(350, easing = FastOutSlowInEasing))
+            delay(index * 100L)
+            scale.animateTo(1f, tween(450, easing = FastOutSlowInEasing))
         }
     }
 
@@ -164,7 +164,7 @@ private fun AnimatedRollCard(
     LaunchedEffect(isExiting) {
         if (isExiting && animate) {
             coroutineScope.launch {
-                scale.animateTo(0f, tween(250, easing = FastOutSlowInEasing))
+                scale.animateTo(0f, tween(350, easing = FastOutSlowInEasing))
             }
         }
     }

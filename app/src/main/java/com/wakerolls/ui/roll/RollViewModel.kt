@@ -124,11 +124,11 @@ class RollViewModel @Inject constructor(
         }
         viewModelScope.launch {
             if (state.hasRolled) consumeReroll()
+            _uiState.value = _uiState.value.copy(isRolling = true)
 
             // Outro animation: shrink old cards
             if (state.hasRolled && state.results.isNotEmpty() && state.enableAnimations) {
-                _uiState.value = _uiState.value.copy(isRolling = true)
-                delay(300) // wait for shrink animation
+                delay(500) // wait for shrink animation
             }
 
             val results = mutableListOf<RollResult>()
