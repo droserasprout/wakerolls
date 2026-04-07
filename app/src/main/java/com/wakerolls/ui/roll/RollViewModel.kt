@@ -3,6 +3,8 @@ package com.wakerolls.ui.roll
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wakerolls.data.repository.ItemRepository
@@ -12,15 +14,16 @@ import com.wakerolls.domain.model.Rarity
 import com.wakerolls.domain.model.Scenario
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_ALLOW_PARTIAL_REROLLS
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_ALLOW_REROLLS
+import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_ENABLE_ANIMATIONS
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_REROLLS_DATE
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_REROLLS_PER_DAY
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_REROLLS_USED
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
@@ -41,6 +44,8 @@ data class RollUiState(
     val rerollsPerDay: Int = 3,
     val allowRerolls: Boolean = true,
     val allowPartialRerolls: Boolean = true,
+    val enableAnimations: Boolean = true,
+    val rollGeneration: Int = 0,
 )
 
 @HiltViewModel
@@ -50,8 +55,14 @@ class RollViewModel @Inject constructor(
     private val dataStore: DataStore<Preferences>,
 ) : ViewModel() {
 
+    companion object {
+        private val KEY_SAVED_SCENARIO_ID = longPreferencesKey("roll_scenario_id")
+        private val KEY_SAVED_RESULTS = stringPreferencesKey("roll_results")
+    }
+
     private val _uiState = MutableStateFlow(RollUiState())
     val uiState: StateFlow<RollUiState> = _uiState.asStateFlow()
+    private var restoredResults = false
 
     init {
         viewModelScope.launch {
@@ -66,6 +77,10 @@ class RollViewModel @Inject constructor(
                     scenarios = scenarios,
                     selectedScenarioId = selectedId,
                 )
+                if (!restoredResults) {
+                    restoredResults = true
+                    restoreResults()
+                }
             }
         }
         viewModelScope.launch {
@@ -73,6 +88,7 @@ class RollViewModel @Inject constructor(
                 val perDay = prefs[KEY_REROLLS_PER_DAY] ?: 3
                 val allowRerolls = prefs[KEY_ALLOW_REROLLS] ?: true
                 val allowPartialRerolls = prefs[KEY_ALLOW_PARTIAL_REROLLS] ?: true
+                val enableAnimations = prefs[KEY_ENABLE_ANIMATIONS] ?: true
                 val today = LocalDate.now().toString()
                 val storedDate = prefs[KEY_REROLLS_DATE] ?: ""
                 val used = if (storedDate == today) (prefs[KEY_REROLLS_USED] ?: 0) else 0
@@ -82,6 +98,7 @@ class RollViewModel @Inject constructor(
                     rerollsLeft = rerollsLeft,
                     allowRerolls = allowRerolls,
                     allowPartialRerolls = allowPartialRerolls,
+                    enableAnimations = enableAnimations,
                 )
             }
         }
@@ -90,18 +107,24 @@ class RollViewModel @Inject constructor(
     fun selectScenario(id: Long) {
         if (id == _uiState.value.selectedScenarioId) return
         _uiState.value = _uiState.value.copy(selectedScenarioId = id, results = emptyList(), hasRolled = false)
+        viewModelScope.launch { saveResults(id, emptyList()) }
     }
 
     fun rollAll() {
         val state = _uiState.value
         val scenario = state.scenarios.find { it.id == state.selectedScenarioId } ?: return
-        // First roll is free; subsequent full rolls cost a reroll
         if (state.hasRolled) {
             if (!state.allowRerolls || state.rerollsLeft <= 0) return
         }
         viewModelScope.launch {
             if (state.hasRolled) consumeReroll()
-            _uiState.value = _uiState.value.copy(isRolling = true)
+
+            // Outro animation: shrink old cards
+            if (state.hasRolled && state.results.isNotEmpty() && state.enableAnimations) {
+                _uiState.value = _uiState.value.copy(isRolling = true)
+                delay(300) // wait for shrink animation
+            }
+
             val results = mutableListOf<RollResult>()
             for (slot in scenario.slots) {
                 val items = pickMultiple(slot.category, slot.count)
@@ -116,7 +139,13 @@ class RollViewModel @Inject constructor(
                     }
                 }
             }
-            _uiState.value = _uiState.value.copy(results = results, isRolling = false, hasRolled = true)
+            _uiState.value = _uiState.value.copy(
+                results = results,
+                isRolling = false,
+                hasRolled = true,
+                rollGeneration = _uiState.value.rollGeneration + 1,
+            )
+            saveResults(state.selectedScenarioId!!, results)
         }
     }
 
@@ -130,6 +159,7 @@ class RollViewModel @Inject constructor(
             val updated = _uiState.value.results.toMutableList()
             updated[index] = current.copy(item = picked)
             _uiState.value = _uiState.value.copy(results = updated)
+            _uiState.value.selectedScenarioId?.let { saveResults(it, updated) }
         }
     }
 
@@ -155,5 +185,42 @@ class RollViewModel @Inject constructor(
             available.remove(item)
         }
         return picked
+    }
+
+    // Persistence: encode results as "label\tcategory\titemId;..." (-1 for null item)
+    private suspend fun saveResults(scenarioId: Long, results: List<RollResult>) {
+        dataStore.edit { prefs ->
+            prefs[KEY_SAVED_SCENARIO_ID] = scenarioId
+            prefs[KEY_SAVED_RESULTS] = results.joinToString(";") { r ->
+                "${r.label}\t${r.category}\t${r.item?.id ?: -1}"
+            }
+        }
+    }
+
+    private suspend fun restoreResults() {
+        val prefs = dataStore.data.first()
+        val savedScenarioId = prefs[KEY_SAVED_SCENARIO_ID] ?: return
+        val savedResults = prefs[KEY_SAVED_RESULTS] ?: return
+        if (savedResults.isBlank()) return
+
+        val entries = savedResults.split(";").mapNotNull { entry ->
+            val parts = entry.split("\t")
+            if (parts.size != 3) return@mapNotNull null
+            Triple(parts[0], parts[1], parts[2].toLongOrNull() ?: return@mapNotNull null)
+        }
+        if (entries.isEmpty()) return
+
+        val itemIds = entries.mapNotNull { (_, _, id) -> if (id != -1L) id else null }
+        val itemMap = if (itemIds.isNotEmpty()) itemRepository.getByIds(itemIds) else emptyMap()
+
+        val results = entries.map { (label, category, itemId) ->
+            RollResult(label = label, category = category, item = itemMap[itemId])
+        }
+
+        _uiState.value = _uiState.value.copy(
+            selectedScenarioId = savedScenarioId,
+            results = results,
+            hasRolled = true,
+        )
     }
 }

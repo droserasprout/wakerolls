@@ -17,6 +17,9 @@ class ItemRepository @Inject constructor(private val dao: ItemDao) {
     fun observeEnabled(category: String): Flow<List<Item>> =
         dao.observeEnabled(category).map { list -> list.map { it.toDomain() } }
 
+    suspend fun getByIds(ids: List<Long>): Map<Long, Item> =
+        dao.getByIds(ids).associate { it.toDomain().let { item -> item.id to item } }
+
     fun observeCategories(): Flow<List<String>> = dao.observeCategories()
 
     suspend fun save(item: Item) { dao.insert(ItemEntity.fromDomain(item)) }

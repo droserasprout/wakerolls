@@ -2,14 +2,11 @@ package com.wakerolls.ui.roll
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -20,9 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,35 +77,28 @@ fun RollScreen(viewModel: RollViewModel = hiltViewModel()) {
 
         Spacer(Modifier.height(24.dp))
 
-        // Roll results
+        // Roll results (no empty placeholder cards)
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            if (state.results.isEmpty()) {
-                val scenario = state.scenarios.find { it.id == state.selectedScenarioId }
-                scenario?.slots?.forEach { slot ->
-                    if (slot.count == 1) {
-                        RollCard(label = slot.category, item = null)
-                    } else {
-                        repeat(slot.count) { i ->
-                            RollCard(label = "${slot.category} #${i + 1}", item = null)
-                        }
-                    }
-                }
-            } else {
+            if (state.results.isNotEmpty()) {
                 state.results.forEachIndexed { index, result ->
                     val showReroll = state.allowRerolls && state.allowPartialRerolls
                             && state.rerollsLeft > 0 && result.item != null
-                    AnimatedRollCard(
-                        label = result.label,
-                        item = result.item,
-                        index = index,
-                        showReroll = showReroll,
-                        onReroll = { viewModel.reroll(index) },
-                    )
+                    key(state.rollGeneration, index) {
+                        AnimatedRollCard(
+                            label = result.label,
+                            item = result.item,
+                            index = index,
+                            showReroll = showReroll,
+                            onReroll = { viewModel.reroll(index) },
+                            isExiting = state.isRolling,
+                            animate = state.enableAnimations,
+                        )
+                    }
                 }
             }
         }
@@ -156,43 +146,43 @@ private fun AnimatedRollCard(
     index: Int,
     showReroll: Boolean,
     onReroll: () -> Unit,
+    isExiting: Boolean,
+    animate: Boolean,
 ) {
-    val offsetX = remember { Animatable(300f) }
-    val alpha = remember { Animatable(0f) }
-    val scale = remember { Animatable(0.6f) }
+    val scale = remember { Animatable(if (animate) 0f else 1f) }
+    val coroutineScope = rememberCoroutineScope()
 
+    // Intro: grow from center
     LaunchedEffect(Unit) {
-        delay(index * 80L)
-        launch { offsetX.animateTo(0f, tween(400, easing = LinearOutSlowInEasing)) }
-        launch { alpha.animateTo(1f, tween(300)) }
-        launch {
-            scale.animateTo(
-                1f,
-                keyframes {
-                    durationMillis = 500
-                    0.6f at 0 using FastOutSlowInEasing
-                    1.08f at 300 using FastOutSlowInEasing
-                    1f at 500 using FastOutSlowInEasing
-                },
-            )
+        if (animate) {
+            delay(index * 60L)
+            scale.animateTo(1f, tween(350, easing = FastOutSlowInEasing))
+        }
+    }
+
+    // Outro: shrink to center
+    LaunchedEffect(isExiting) {
+        if (isExiting && animate) {
+            coroutineScope.launch {
+                scale.animateTo(0f, tween(250, easing = FastOutSlowInEasing))
+            }
         }
     }
 
     Box(
         modifier = Modifier
-            .offset(x = offsetX.value.dp)
+            .fillMaxWidth()
             .graphicsLayer {
                 scaleX = scale.value
                 scaleY = scale.value
-            }
-            .then(Modifier.fillMaxWidth()),
+                alpha = scale.value
+            },
     ) {
         RollCard(
             label = label,
             item = item,
             showReroll = showReroll,
             onReroll = onReroll,
-            alpha = alpha.value,
         )
     }
 }
@@ -203,7 +193,6 @@ fun RollCard(
     item: Item?,
     showReroll: Boolean = false,
     onReroll: (() -> Unit)? = null,
-    alpha: Float = 1f,
 ) {
     val rarityColor = item?.rarity?.color() ?: TextSecondary
     val glowLevel = item?.rarity?.glowLevel() ?: 0f
@@ -216,11 +205,10 @@ fun RollCard(
             .background(DarkSurface)
             .then(
                 if (glowLevel > 0f) {
-                    val edgeAlpha = glowLevel * 0.12f * alpha
-                    val glowInset = 20f // same spread for all rarities
+                    val edgeAlpha = glowLevel * 0.12f
+                    val glowInset = 20f
                     Modifier.drawWithContent {
                         drawContent()
-                        // Top edge glow
                         drawRect(
                             brush = Brush.verticalGradient(
                                 colors = listOf(rarityColor.copy(alpha = edgeAlpha), Color.Transparent),
@@ -228,7 +216,6 @@ fun RollCard(
                                 endY = glowInset * density,
                             ),
                         )
-                        // Bottom edge glow
                         drawRect(
                             brush = Brush.verticalGradient(
                                 colors = listOf(Color.Transparent, rarityColor.copy(alpha = edgeAlpha)),
@@ -236,7 +223,6 @@ fun RollCard(
                                 endY = size.height,
                             ),
                         )
-                        // Left edge glow
                         drawRect(
                             brush = Brush.horizontalGradient(
                                 colors = listOf(rarityColor.copy(alpha = edgeAlpha), Color.Transparent),
@@ -244,7 +230,6 @@ fun RollCard(
                                 endX = glowInset * density,
                             ),
                         )
-                        // Right edge glow
                         drawRect(
                             brush = Brush.horizontalGradient(
                                 colors = listOf(Color.Transparent, rarityColor.copy(alpha = edgeAlpha)),
@@ -257,7 +242,7 @@ fun RollCard(
             )
             .border(
                 width = 1.dp,
-                brush = Brush.linearGradient(listOf(rarityColor.copy(alpha = 0.6f * alpha), rarityColor.copy(alpha = 0.1f * alpha))),
+                brush = Brush.linearGradient(listOf(rarityColor.copy(alpha = 0.6f), rarityColor.copy(alpha = 0.1f))),
                 shape = RoundedCornerShape(20.dp),
             ),
     ) {
@@ -394,4 +379,3 @@ fun Rarity.glowLevel(): Float = when (this) {
     Rarity.RARE -> 2f
     Rarity.LEGENDARY -> 3f
 }
-

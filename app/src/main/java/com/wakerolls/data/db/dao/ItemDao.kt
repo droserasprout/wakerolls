@@ -12,6 +12,9 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE category = :category AND enabled = 1")
     fun observeEnabled(category: String): Flow<List<ItemEntity>>
 
+    @Query("SELECT * FROM items WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<Long>): List<ItemEntity>
+
     @Query("SELECT DISTINCT category FROM items ORDER BY category")
     fun observeCategories(): Flow<List<String>>
 

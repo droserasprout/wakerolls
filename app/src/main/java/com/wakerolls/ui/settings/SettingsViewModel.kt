@@ -26,6 +26,7 @@ data class SettingsUiState(
     val rerollsPerDay: Int = 3,
     val allowRerolls: Boolean = true,
     val allowPartialRerolls: Boolean = true,
+    val enableAnimations: Boolean = true,
 )
 
 @HiltViewModel
@@ -43,6 +44,7 @@ class SettingsViewModel @Inject constructor(
         val KEY_REROLLS_DATE = stringPreferencesKey("rerolls_date")
         val KEY_ALLOW_REROLLS = booleanPreferencesKey("allow_rerolls")
         val KEY_ALLOW_PARTIAL_REROLLS = booleanPreferencesKey("allow_partial_rerolls")
+        val KEY_ENABLE_ANIMATIONS = booleanPreferencesKey("enable_animations")
     }
 
     val uiState: StateFlow<SettingsUiState> = dataStore.data
@@ -54,6 +56,7 @@ class SettingsViewModel @Inject constructor(
                 rerollsPerDay = prefs[KEY_REROLLS_PER_DAY] ?: 3,
                 allowRerolls = prefs[KEY_ALLOW_REROLLS] ?: true,
                 allowPartialRerolls = prefs[KEY_ALLOW_PARTIAL_REROLLS] ?: true,
+                enableAnimations = prefs[KEY_ENABLE_ANIMATIONS] ?: true,
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
@@ -85,6 +88,12 @@ class SettingsViewModel @Inject constructor(
     fun setAllowPartialRerolls(enabled: Boolean) {
         viewModelScope.launch {
             dataStore.edit { it[KEY_ALLOW_PARTIAL_REROLLS] = enabled }
+        }
+    }
+
+    fun setEnableAnimations(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStore.edit { it[KEY_ENABLE_ANIMATIONS] = enabled }
         }
     }
 

@@ -118,6 +118,31 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(Modifier.height(12.dp))
 
+        // Enable animations toggle
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(DarkSurface)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Enable animations", style = MaterialTheme.typography.titleMedium)
+                Text("Card roll and reroll animations", style = MaterialTheme.typography.bodyMedium)
+            }
+            Switch(
+                checked = state.enableAnimations,
+                onCheckedChange = { viewModel.setEnableAnimations(it) },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = AccentGold,
+                    checkedTrackColor = AccentGold.copy(alpha = 0.4f),
+                ),
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         // Notification toggle row
         Row(
             modifier = Modifier
