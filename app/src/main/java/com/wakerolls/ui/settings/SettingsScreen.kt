@@ -14,7 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wakerolls.ui.theme.*
 
 @Composable
-fun SettingsScreen(padding: PaddingValues, viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showTimePicker by remember { mutableStateOf(false) }
 
@@ -22,7 +22,6 @@ fun SettingsScreen(padding: PaddingValues, viewModel: SettingsViewModel = hiltVi
         modifier = Modifier
             .fillMaxSize()
             .background(DarkBackground)
-            .padding(padding)
             .padding(horizontal = 20.dp),
     ) {
         Spacer(Modifier.height(24.dp))

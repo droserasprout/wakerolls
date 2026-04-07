@@ -1,63 +1,64 @@
 package com.wakerolls.ui.navigation
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import com.wakerolls.ui.library.LibraryScreen
+import com.wakerolls.ui.library.ItemsScreen
+import com.wakerolls.ui.library.ScenariosScreen
 import com.wakerolls.ui.roll.RollScreen
 import com.wakerolls.ui.settings.SettingsScreen
+import com.wakerolls.ui.theme.DarkSurface
+import kotlinx.coroutines.launch
 
-sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Roll : Screen("roll", "Roll", Icons.Filled.Star)
-    object Library : Screen("library", "Library", Icons.Filled.List)
-    object Settings : Screen("settings", "Settings", Icons.Filled.Settings)
-}
+data class Page(val label: String, val icon: ImageVector)
 
-val bottomNavItems = listOf(Screen.Roll, Screen.Library, Screen.Settings)
+val pages = listOf(
+    Page("Roll", Icons.Filled.Star),
+    Page("Items", Icons.Filled.List),
+    Page("Scenarios", Icons.Filled.PlayArrow),
+    Page("Settings", Icons.Filled.Settings),
+)
 
 @Composable
 fun WakerollsNavGraph() {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
+    val pagerState = rememberPagerState(pageCount = { pages.size })
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = androidx.compose.ui.graphics.Color(0xFF1A1A1F),
-            ) {
-                bottomNavItems.forEach { screen ->
+            NavigationBar(containerColor = DarkSurface) {
+                pages.forEachIndexed { index, page ->
                     NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = screen.label) },
-                        label = { Text(screen.label) },
-                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
+                        icon = { Icon(page.icon, contentDescription = page.label) },
+                        label = { Text(page.label) },
+                        selected = pagerState.currentPage == index,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                     )
                 }
             }
         }
     ) { innerPadding ->
-        NavHost(navController = navController, startDestination = Screen.Roll.route) {
-            composable(Screen.Roll.route) { RollScreen(innerPadding) }
-            composable(Screen.Library.route) { LibraryScreen(innerPadding) }
-            composable(Screen.Settings.route) { SettingsScreen(innerPadding) }
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.padding(innerPadding),
+            beyondViewportPageCount = 1,
+        ) { page ->
+            when (page) {
+                0 -> RollScreen()
+                1 -> ItemsScreen()
+                2 -> ScenariosScreen()
+                3 -> SettingsScreen()
+            }
         }
     }
 }

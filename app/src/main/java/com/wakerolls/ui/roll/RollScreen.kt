@@ -25,14 +25,13 @@ import com.wakerolls.domain.model.Rarity
 import com.wakerolls.ui.theme.*
 
 @Composable
-fun RollScreen(padding: PaddingValues, viewModel: RollViewModel = hiltViewModel()) {
+fun RollScreen(viewModel: RollViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(DarkBackground)
-            .padding(padding)
             .padding(horizontal = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

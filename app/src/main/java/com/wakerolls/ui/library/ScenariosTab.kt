@@ -8,52 +8,43 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wakerolls.domain.model.Scenario
 import com.wakerolls.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScenariosTab(state: LibraryUiState, viewModel: LibraryViewModel) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
-            items(state.scenarios, key = { it.id }) { scenario ->
-                val dismissState = rememberSwipeToDismissBoxState(
-                    confirmValueChange = {
-                        if (it == SwipeToDismissBoxValue.EndToStart) {
-                            viewModel.onDeleteScenarioClick(scenario)
-                        }
-                        false
-                    }
-                )
-                SwipeToDismissBox(
-                    state = dismissState,
-                    backgroundContent = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(AccentCoral.copy(alpha = 0.3f))
-                                .padding(horizontal = 20.dp),
-                            contentAlignment = Alignment.CenterEnd,
-                        ) {
-                            Icon(Icons.Filled.Delete, "Delete", tint = AccentCoral)
-                        }
-                    },
-                    enableDismissFromStartToEnd = false,
-                ) {
+fun ScenariosScreen(viewModel: LibraryViewModel = hiltViewModel()) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DarkBackground),
+    ) {
+        Column {
+            Spacer(Modifier.height(24.dp))
+            Text(
+                text = "Scenarios",
+                style = MaterialTheme.typography.headlineLarge,
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+            Spacer(Modifier.height(16.dp))
+            LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
+                items(state.scenarios, key = { it.id }) { scenario ->
                     ScenarioCard(
                         scenario = scenario,
                         onClick = { viewModel.onEditScenarioClick(scenario) },
                     )
+                    Spacer(Modifier.height(8.dp))
                 }
-                Spacer(Modifier.height(8.dp))
             }
         }
 
@@ -67,6 +58,37 @@ fun ScenariosTab(state: LibraryUiState, viewModel: LibraryViewModel) {
         ) {
             Icon(Icons.Filled.Add, contentDescription = "Add scenario")
         }
+    }
+
+    // Scenario Edit / Add dialog
+    state.editingScenario?.let { editScenario ->
+        ScenarioEditDialog(
+            scenario = editScenario,
+            categories = state.categories,
+            onSave = { viewModel.onSaveScenario(it) },
+            onDelete = if (editScenario.id != 0L) {
+                { viewModel.onDeleteScenarioClick(editScenario); viewModel.onDismissScenarioEdit() }
+            } else null,
+            onDismiss = { viewModel.onDismissScenarioEdit() },
+        )
+    }
+
+    // Scenario delete confirmation
+    state.showDeleteScenarioConfirm?.let { deleteScenario ->
+        AlertDialog(
+            onDismissRequest = { viewModel.onDismissDeleteScenario() },
+            title = { Text("Delete scenario?", color = TextPrimary) },
+            text = { Text("Delete \"${deleteScenario.name}\"?", color = TextSecondary) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onConfirmDeleteScenario() }) {
+                    Text("Delete", color = AccentCoral)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onDismissDeleteScenario() }) { Text("Cancel") }
+            },
+            containerColor = DarkSurface,
+        )
     }
 }
 
