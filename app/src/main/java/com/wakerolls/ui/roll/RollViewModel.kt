@@ -15,6 +15,7 @@ import com.wakerolls.domain.model.Scenario
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_ALLOW_PARTIAL_REROLLS
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_ALLOW_REROLLS
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_ENABLE_ANIMATIONS
+import com.wakerolls.ui.settings.SettingsViewModel.Companion.weightKey
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_REROLLS_DATE
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_REROLLS_PER_DAY
 import com.wakerolls.ui.settings.SettingsViewModel.Companion.KEY_REROLLS_USED
@@ -46,6 +47,7 @@ data class RollUiState(
     val allowPartialRerolls: Boolean = true,
     val enableAnimations: Boolean = true,
     val rollGeneration: Int = 0,
+    val weights: Map<Rarity, Int> = Rarity.entries.associate { it to it.weight },
 )
 
 @HiltViewModel
@@ -89,6 +91,9 @@ class RollViewModel @Inject constructor(
                 val allowRerolls = prefs[KEY_ALLOW_REROLLS] ?: true
                 val allowPartialRerolls = prefs[KEY_ALLOW_PARTIAL_REROLLS] ?: true
                 val enableAnimations = prefs[KEY_ENABLE_ANIMATIONS] ?: true
+                val weights = Rarity.entries.associate { r ->
+                    r to (prefs[weightKey(r)] ?: r.weight)
+                }
                 val today = LocalDate.now().toString()
                 val storedDate = prefs[KEY_REROLLS_DATE] ?: ""
                 val used = if (storedDate == today) (prefs[KEY_REROLLS_USED] ?: 0) else 0
@@ -99,6 +104,7 @@ class RollViewModel @Inject constructor(
                     allowRerolls = allowRerolls,
                     allowPartialRerolls = allowPartialRerolls,
                     enableAnimations = enableAnimations,
+                    weights = weights,
                 )
             }
         }
@@ -155,7 +161,8 @@ class RollViewModel @Inject constructor(
         viewModelScope.launch {
             consumeReroll()
             val items = itemRepository.observeEnabled(current.category).first()
-            val picked = if (items.isEmpty()) null else Rarity.weightedRandom(items) { it.rarity }
+            val weights = _uiState.value.weights
+            val picked = if (items.isEmpty()) null else Rarity.weightedRandom(items, weights) { it.rarity }
             val updated = _uiState.value.results.toMutableList()
             updated[index] = current.copy(item = picked)
             _uiState.value = _uiState.value.copy(results = updated)
@@ -177,10 +184,11 @@ class RollViewModel @Inject constructor(
 
     private suspend fun pickMultiple(category: String, count: Int): List<Item> {
         val available = itemRepository.observeEnabled(category).first().toMutableList()
+        val weights = _uiState.value.weights
         val picked = mutableListOf<Item>()
         repeat(count) {
             if (available.isEmpty()) return picked
-            val item = Rarity.weightedRandom(available) { it.rarity }
+            val item = Rarity.weightedRandom(available, weights) { it.rarity }
             picked.add(item)
             available.remove(item)
         }

@@ -2,7 +2,9 @@ package com.wakerolls.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,6 +13,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wakerolls.domain.model.Rarity
+import com.wakerolls.ui.roll.color
 import com.wakerolls.ui.theme.*
 
 @Composable
@@ -22,21 +26,17 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         modifier = Modifier
             .fillMaxSize()
             .background(DarkBackground)
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 20.dp)
+            .verticalScroll(rememberScrollState()),
     ) {
         Spacer(Modifier.height(24.dp))
         Text("Settings", style = MaterialTheme.typography.headlineLarge)
-        Spacer(Modifier.height(24.dp))
+
+        // ── General ──
+        SectionHeader("General")
 
         // Allow rerolls toggle
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(DarkSurface)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        SettingsRow {
             Column(Modifier.weight(1f)) {
                 Text("Allow rerolls", style = MaterialTheme.typography.titleMedium)
                 Text("Re-roll your results after the first roll", style = MaterialTheme.typography.bodyMedium)
@@ -44,10 +44,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             Switch(
                 checked = state.allowRerolls,
                 onCheckedChange = { viewModel.setAllowRerolls(it) },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = AccentGold,
-                    checkedTrackColor = AccentGold.copy(alpha = 0.4f),
-                ),
+                colors = goldSwitchColors(),
             )
         }
 
@@ -55,14 +52,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             Spacer(Modifier.height(12.dp))
 
             // Rerolls per day
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(DarkSurface)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            SettingsRow {
                 Column(Modifier.weight(1f)) {
                     Text("Rerolls per day", style = MaterialTheme.typography.titleMedium)
                     Text("How many rerolls you get each day", style = MaterialTheme.typography.bodyMedium)
@@ -93,14 +83,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             Spacer(Modifier.height(12.dp))
 
             // Allow partial rerolls toggle
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(DarkSurface)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            SettingsRow {
                 Column(Modifier.weight(1f)) {
                     Text("Allow partial rerolls", style = MaterialTheme.typography.titleMedium)
                     Text("Re-roll individual cards", style = MaterialTheme.typography.bodyMedium)
@@ -108,10 +91,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 Switch(
                     checked = state.allowPartialRerolls,
                     onCheckedChange = { viewModel.setAllowPartialRerolls(it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = AccentGold,
-                        checkedTrackColor = AccentGold.copy(alpha = 0.4f),
-                    ),
+                    colors = goldSwitchColors(),
                 )
             }
         }
@@ -119,14 +99,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         Spacer(Modifier.height(12.dp))
 
         // Enable animations toggle
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(DarkSurface)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        SettingsRow {
             Column(Modifier.weight(1f)) {
                 Text("Enable animations", style = MaterialTheme.typography.titleMedium)
                 Text("Card roll and reroll animations", style = MaterialTheme.typography.bodyMedium)
@@ -134,24 +107,14 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             Switch(
                 checked = state.enableAnimations,
                 onCheckedChange = { viewModel.setEnableAnimations(it) },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = AccentGold,
-                    checkedTrackColor = AccentGold.copy(alpha = 0.4f),
-                ),
+                colors = goldSwitchColors(),
             )
         }
 
         Spacer(Modifier.height(12.dp))
 
         // Notification toggle row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(DarkSurface)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        SettingsRow {
             Column(Modifier.weight(1f)) {
                 Text("Daily reminder", style = MaterialTheme.typography.titleMedium)
                 Text("Get notified to roll your day", style = MaterialTheme.typography.bodyMedium)
@@ -159,23 +122,13 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             Switch(
                 checked = state.notificationsEnabled,
                 onCheckedChange = { viewModel.setNotificationsEnabled(it) },
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = AccentGold,
-                    checkedTrackColor = AccentGold.copy(alpha = 0.4f),
-                ),
+                colors = goldSwitchColors(),
             )
         }
 
         if (state.notificationsEnabled) {
             Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(DarkSurface)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            SettingsRow {
                 Column(Modifier.weight(1f)) {
                     Text("Reminder time", style = MaterialTheme.typography.titleMedium)
                     Text(
@@ -190,6 +143,48 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             }
         }
 
+        // ── Weights ──
+        SectionHeader("Weights")
+
+        Rarity.entries.forEach { rarity ->
+            val weight = state.weights[rarity] ?: rarity.weight
+            val rarityColor = rarity.color()
+            SettingsRow {
+                Text(
+                    text = rarity.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = rarityColor,
+                    modifier = Modifier.weight(1f),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { viewModel.setWeight(rarity, weight - 1) },
+                        enabled = weight > 0,
+                    ) {
+                        Text("\u2212", style = MaterialTheme.typography.titleLarge,
+                            color = if (weight > 0) TextPrimary else TextSecondary)
+                    }
+                    Text(
+                        text = weight.toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = AccentGold,
+                    )
+                    IconButton(
+                        onClick = { viewModel.setWeight(rarity, weight + 1) },
+                        enabled = weight < 20,
+                    ) {
+                        Text("+", style = MaterialTheme.typography.titleLarge,
+                            color = if (weight < 20) TextPrimary else TextSecondary)
+                    }
+                }
+            }
+            if (rarity != Rarity.entries.last()) {
+                Spacer(Modifier.height(12.dp))
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
         if (showTimePicker) {
             TimePickerDialog(
                 initialHour = state.notificationHour,
@@ -203,6 +198,36 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         }
     }
 }
+
+@Composable
+private fun SectionHeader(title: String) {
+    Spacer(Modifier.height(24.dp))
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        color = TextSecondary,
+    )
+    Spacer(Modifier.height(12.dp))
+}
+
+@Composable
+private fun SettingsRow(content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(DarkSurface)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        content = content,
+    )
+}
+
+@Composable
+private fun goldSwitchColors() = SwitchDefaults.colors(
+    checkedThumbColor = AccentGold,
+    checkedTrackColor = AccentGold.copy(alpha = 0.4f),
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

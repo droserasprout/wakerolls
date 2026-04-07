@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wakerolls.domain.model.Rarity
 import com.wakerolls.worker.DailyRollWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,6 +28,7 @@ data class SettingsUiState(
     val allowRerolls: Boolean = true,
     val allowPartialRerolls: Boolean = true,
     val enableAnimations: Boolean = true,
+    val weights: Map<Rarity, Int> = Rarity.entries.associate { it to it.weight },
 )
 
 @HiltViewModel
@@ -45,6 +47,8 @@ class SettingsViewModel @Inject constructor(
         val KEY_ALLOW_REROLLS = booleanPreferencesKey("allow_rerolls")
         val KEY_ALLOW_PARTIAL_REROLLS = booleanPreferencesKey("allow_partial_rerolls")
         val KEY_ENABLE_ANIMATIONS = booleanPreferencesKey("enable_animations")
+
+        fun weightKey(rarity: Rarity) = intPreferencesKey("weight_${rarity.name.lowercase()}")
     }
 
     val uiState: StateFlow<SettingsUiState> = dataStore.data
@@ -57,6 +61,9 @@ class SettingsViewModel @Inject constructor(
                 allowRerolls = prefs[KEY_ALLOW_REROLLS] ?: true,
                 allowPartialRerolls = prefs[KEY_ALLOW_PARTIAL_REROLLS] ?: true,
                 enableAnimations = prefs[KEY_ENABLE_ANIMATIONS] ?: true,
+                weights = Rarity.entries.associate { r ->
+                    r to (prefs[weightKey(r)] ?: r.weight)
+                },
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
@@ -94,6 +101,12 @@ class SettingsViewModel @Inject constructor(
     fun setEnableAnimations(enabled: Boolean) {
         viewModelScope.launch {
             dataStore.edit { it[KEY_ENABLE_ANIMATIONS] = enabled }
+        }
+    }
+
+    fun setWeight(rarity: Rarity, weight: Int) {
+        viewModelScope.launch {
+            dataStore.edit { it[weightKey(rarity)] = weight.coerceAtLeast(0) }
         }
     }
 
