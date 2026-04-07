@@ -5,7 +5,8 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -138,37 +139,46 @@ private fun LongPressButton(
     onComplete: () -> Unit,
 ) {
     val progress = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val bgColor = if (enabled) AccentGold else TextSecondary
+    var pressing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(pressing) {
+        if (pressing) {
+            progress.snapTo(0f)
+            val result = progress.animateTo(1f, tween(LONG_PRESS_DURATION_MS, easing = LinearEasing))
+            if (result.endReason == androidx.compose.animation.core.AnimationEndReason.Finished) {
+                onComplete()
+            }
+        } else {
+            progress.snapTo(0f)
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(bgColor.copy(alpha = 0.2f))
-            .then(
-                if (enabled) {
-                    Modifier.pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = {
-                                val job = scope.launch {
-                                    progress.animateTo(1f, tween(LONG_PRESS_DURATION_MS, easing = LinearEasing))
-                                }
-                                val released = tryAwaitRelease()
-                                job.cancel()
-                                if (progress.value >= 1f) {
-                                    onComplete()
-                                }
-                                progress.snapTo(0f)
-                            },
-                        )
+            .background(AccentGold.copy(alpha = 0.2f))
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    down.consume()
+                    pressing = true
+                    try {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.changes.all { !it.pressed }) break
+                            event.changes.forEach { it.consume() }
+                        }
+                    } finally {
+                        pressing = false
                     }
-                } else Modifier
-            )
+                }
+            }
             .drawBehind {
                 drawRect(
-                    color = bgColor,
+                    color = AccentGold,
                     topLeft = Offset.Zero,
                     size = Size(size.width * progress.value, size.height),
                 )
@@ -188,8 +198,20 @@ private fun LongPressButton(
 fun RollCard(label: String, item: Item?, canReroll: Boolean = false, onReroll: (() -> Unit)? = null) {
     val rarityColor = item?.rarity?.color() ?: TextSecondary
     val progress = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val showProgress = canReroll && onReroll != null && item != null
+    val interactive = canReroll && onReroll != null && item != null
+    var pressing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(pressing) {
+        if (pressing && interactive) {
+            progress.snapTo(0f)
+            val result = progress.animateTo(1f, tween(LONG_PRESS_DURATION_MS, easing = LinearEasing))
+            if (result.endReason == androidx.compose.animation.core.AnimationEndReason.Finished) {
+                onReroll!!()
+            }
+        } else {
+            progress.snapTo(0f)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -202,25 +224,23 @@ fun RollCard(label: String, item: Item?, canReroll: Boolean = false, onReroll: (
                 brush = Brush.linearGradient(listOf(rarityColor.copy(alpha = 0.6f), rarityColor.copy(alpha = 0.1f))),
                 shape = RoundedCornerShape(20.dp),
             )
-            .then(
-                if (showProgress) {
-                    Modifier.pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = {
-                                val job = scope.launch {
-                                    progress.animateTo(1f, tween(LONG_PRESS_DURATION_MS, easing = LinearEasing))
-                                }
-                                val released = tryAwaitRelease()
-                                job.cancel()
-                                if (progress.value >= 1f) {
-                                    onReroll!!()
-                                }
-                                progress.snapTo(0f)
-                            },
-                        )
+            .pointerInput(interactive) {
+                if (!interactive) return@pointerInput
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    down.consume()
+                    pressing = true
+                    try {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.changes.all { !it.pressed }) break
+                            event.changes.forEach { it.consume() }
+                        }
+                    } finally {
+                        pressing = false
                     }
-                } else Modifier
-            )
+                }
+            }
             .drawBehind {
                 if (progress.value > 0f) {
                     drawRect(
