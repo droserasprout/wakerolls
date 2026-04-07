@@ -7,7 +7,9 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.wakerolls.data.db.AppDatabase
 import com.wakerolls.data.db.dao.ItemDao
+import com.wakerolls.data.db.dao.ScenarioDao
 import com.wakerolls.data.repository.ItemRepository
+import com.wakerolls.data.repository.ScenarioRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,13 +28,22 @@ object AppModule {
 
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "wakerolls.db").build()
+        Room.databaseBuilder(context, AppDatabase::class.java, "wakerolls.db")
+            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides
     fun provideItemDao(db: AppDatabase): ItemDao = db.itemDao()
 
     @Provides @Singleton
     fun provideItemRepository(dao: ItemDao): ItemRepository = ItemRepository(dao)
+
+    @Provides
+    fun provideScenarioDao(db: AppDatabase): ScenarioDao = db.scenarioDao()
+
+    @Provides @Singleton
+    fun provideScenarioRepository(dao: ScenarioDao): ScenarioRepository = ScenarioRepository(dao)
 
     @Provides @Singleton
     fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> = context.dataStore
