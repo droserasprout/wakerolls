@@ -23,6 +23,7 @@ data class LibraryUiState(
     val grouped: Map<String, List<Item>> = emptyMap(),
     val categories: List<String> = emptyList(),
     val sortMode: ItemSortMode = ItemSortMode.AZ,
+    val collapsedCategories: Set<String> = emptySet(),
     val editingItem: Item? = null,
     val showDeleteConfirm: Item? = null,
     val scenarios: List<Scenario> = emptyList(),
@@ -45,14 +46,15 @@ class LibraryViewModel @Inject constructor(
 
     private val _dialogState = MutableStateFlow(DialogState())
     private val _sortMode = MutableStateFlow(ItemSortMode.AZ)
+    private val _collapsedCategories = MutableStateFlow(emptySet<String>())
 
     val uiState: StateFlow<LibraryUiState> = combine(
         repository.observeAll(),
         repository.observeCategories(),
         scenarioRepository.observeAll(),
         _dialogState,
-        _sortMode,
-    ) { items, categories, scenarios, dialog, sortMode ->
+        combine(_sortMode, _collapsedCategories) { a, b -> a to b },
+    ) { items, categories, scenarios, dialog, (sortMode, collapsed) ->
         val sorted = when (sortMode) {
             ItemSortMode.AZ -> items.sortedBy { it.name.lowercase() }
             ItemSortMode.RARITY -> items.sortedBy { it.rarity.ordinal }
@@ -61,6 +63,7 @@ class LibraryViewModel @Inject constructor(
             grouped = sorted.groupBy { it.category },
             categories = categories,
             sortMode = sortMode,
+            collapsedCategories = collapsed,
             editingItem = dialog.editingItem,
             showDeleteConfirm = dialog.showDeleteConfirm,
             scenarios = scenarios,
@@ -73,6 +76,20 @@ class LibraryViewModel @Inject constructor(
         _sortMode.value = when (_sortMode.value) {
             ItemSortMode.AZ -> ItemSortMode.RARITY
             ItemSortMode.RARITY -> ItemSortMode.AZ
+        }
+    }
+
+    fun toggleCategory(category: String) {
+        val current = _collapsedCategories.value
+        _collapsedCategories.value = if (category in current) current - category else current + category
+    }
+
+    fun toggleAllCategories() {
+        val allCategories = uiState.value.grouped.keys
+        _collapsedCategories.value = if (_collapsedCategories.value.size >= allCategories.size) {
+            emptySet()
+        } else {
+            allCategories.toSet()
         }
     }
 

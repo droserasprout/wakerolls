@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,6 +45,14 @@ fun ItemsScreen(viewModel: LibraryViewModel = hiltViewModel()) {
                     style = MaterialTheme.typography.headlineLarge,
                     modifier = Modifier.weight(1f),
                 )
+                val allCollapsed = state.collapsedCategories.size >= state.grouped.size && state.grouped.isNotEmpty()
+                IconButton(onClick = { viewModel.toggleAllCategories() }) {
+                    Icon(
+                        imageVector = if (allCollapsed) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                        contentDescription = if (allCollapsed) "Unfold all" else "Fold all",
+                        tint = AccentGold,
+                    )
+                }
                 TextButton(onClick = { viewModel.toggleSort() }) {
                     Text(
                         text = if (state.sortMode == ItemSortMode.AZ) "A-Z" else "Rarity",
@@ -54,17 +64,25 @@ fun ItemsScreen(viewModel: LibraryViewModel = hiltViewModel()) {
             Spacer(Modifier.height(8.dp))
             LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
                 state.grouped.forEach { (category, items) ->
+                    val collapsed = category in state.collapsedCategories
                     item {
-                        CategoryHeader(category)
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    items(items, key = { it.id }) { item ->
-                        LibraryItemRow(
-                            item = item,
-                            onEdit = { viewModel.onEditClick(item) },
-                            onToggle = { viewModel.toggleEnabled(item) },
+                        CategoryHeader(
+                            category = category,
+                            itemCount = items.size,
+                            collapsed = collapsed,
+                            onClick = { viewModel.toggleCategory(category) },
                         )
                         Spacer(Modifier.height(8.dp))
+                    }
+                    if (!collapsed) {
+                        items(items, key = { it.id }) { item ->
+                            LibraryItemRow(
+                                item = item,
+                                onEdit = { viewModel.onEditClick(item) },
+                                onToggle = { viewModel.toggleEnabled(item) },
+                            )
+                            Spacer(Modifier.height(8.dp))
+                        }
                     }
                     item { Spacer(Modifier.height(12.dp)) }
                 }
@@ -116,14 +134,39 @@ fun ItemsScreen(viewModel: LibraryViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun CategoryHeader(category: String) {
-    Text(
-        text = category.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        letterSpacing = 2.sp,
-        color = TextSecondary,
-        modifier = Modifier.padding(vertical = 4.dp),
-    )
+private fun CategoryHeader(
+    category: String,
+    itemCount: Int,
+    collapsed: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = if (collapsed) Icons.Default.KeyboardArrowRight else Icons.Default.KeyboardArrowDown,
+            contentDescription = null,
+            tint = TextSecondary,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = category.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            letterSpacing = 2.sp,
+            color = TextSecondary,
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = itemCount.toString(),
+            style = MaterialTheme.typography.labelSmall,
+            color = TextSecondary.copy(alpha = 0.5f),
+        )
+    }
 }
 
 @Composable
