@@ -183,11 +183,13 @@ class RollViewModel @Inject constructor(
     }
 
     private suspend fun pickMultiple(category: String, count: Int): List<Item> {
-        val available = itemRepository.observeEnabled(category).first().toMutableList()
+        val allItems = itemRepository.observeEnabled(category).first()
+        if (allItems.isEmpty()) return emptyList()
+        val available = allItems.toMutableList()
         val weights = _uiState.value.weights
         val picked = mutableListOf<Item>()
         repeat(count) {
-            if (available.isEmpty()) return picked
+            if (available.isEmpty()) available.addAll(allItems) // allow duplicates
             val item = Rarity.weightedRandom(available, weights) { it.rarity }
             picked.add(item)
             available.remove(item)
