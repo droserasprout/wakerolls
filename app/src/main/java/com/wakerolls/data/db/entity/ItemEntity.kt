@@ -2,7 +2,6 @@ package com.wakerolls.data.db.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.wakerolls.domain.model.Category
 import com.wakerolls.domain.model.Item
 import com.wakerolls.domain.model.Rarity
 
@@ -10,7 +9,7 @@ import com.wakerolls.domain.model.Rarity
 data class ItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val category: Category,
+    val category: String,
     val rarity: Rarity,
     val enabled: Boolean = true,
 ) {

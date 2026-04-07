@@ -13,6 +13,8 @@ data class ScenarioWithSlots(
     fun toDomain() = Scenario(
         id = scenario.id,
         name = scenario.name,
-        slots = slots.map { ScenarioSlot(id = it.id, category = it.category, count = it.count) },
+        slots = slots.map {
+            ScenarioSlot(id = it.id, category = it.category, count = it.count)
+        },
     )
 }

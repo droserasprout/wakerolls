@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wakerolls.data.repository.ItemRepository
 import com.wakerolls.data.repository.ScenarioRepository
-import com.wakerolls.domain.model.Category
 import com.wakerolls.domain.model.Item
 import com.wakerolls.domain.model.Rarity
 import com.wakerolls.domain.model.Scenario
@@ -19,7 +18,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class LibraryUiState(
-    val grouped: Map<Category, List<Item>> = emptyMap(),
+    val grouped: Map<String, List<Item>> = emptyMap(),
+    val categories: List<String> = emptyList(),
     val editingItem: Item? = null,
     val showDeleteConfirm: Item? = null,
     val scenarios: List<Scenario> = emptyList(),
@@ -44,11 +44,13 @@ class LibraryViewModel @Inject constructor(
 
     val uiState: StateFlow<LibraryUiState> = combine(
         repository.observeAll(),
+        repository.observeCategories(),
         scenarioRepository.observeAll(),
         _dialogState,
-    ) { items, scenarios, dialog ->
+    ) { items, categories, scenarios, dialog ->
         LibraryUiState(
             grouped = items.groupBy { it.category },
+            categories = categories,
             editingItem = dialog.editingItem,
             showDeleteConfirm = dialog.showDeleteConfirm,
             scenarios = scenarios,
@@ -65,7 +67,7 @@ class LibraryViewModel @Inject constructor(
 
     fun onAddClick() {
         _dialogState.value = _dialogState.value.copy(
-            editingItem = Item(name = "", category = Category.BREAKFAST, rarity = Rarity.COMMON)
+            editingItem = Item(name = "", category = "", rarity = Rarity.COMMON)
         )
     }
 
@@ -104,7 +106,7 @@ class LibraryViewModel @Inject constructor(
         _dialogState.value = _dialogState.value.copy(
             editingScenario = Scenario(
                 name = "",
-                slots = listOf(ScenarioSlot(category = Category.BREAKFAST, count = 1)),
+                slots = listOf(ScenarioSlot(category = "", count = 1)),
             )
         )
     }

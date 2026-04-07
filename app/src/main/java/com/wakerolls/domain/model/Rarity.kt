@@ -3,7 +3,8 @@ package com.wakerolls.domain.model
 enum class Rarity(val weight: Int) {
     COMMON(6),
     UNCOMMON(3),
-    RARE(1);
+    RARE(1),
+    LEGENDARY(1);
 
     companion object {
         fun <T> weightedRandom(items: List<T>, rarityOf: (T) -> Rarity): T {

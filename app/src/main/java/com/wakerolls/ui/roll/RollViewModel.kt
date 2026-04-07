@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wakerolls.data.repository.ItemRepository
 import com.wakerolls.data.repository.ScenarioRepository
-import com.wakerolls.domain.model.Category
 import com.wakerolls.domain.model.Item
 import com.wakerolls.domain.model.Rarity
 import com.wakerolls.domain.model.Scenario
@@ -18,7 +17,7 @@ import javax.inject.Inject
 
 data class RollResult(
     val label: String,
-    val category: Category,
+    val category: String,
     val item: Item?,
 )
 
@@ -68,14 +67,14 @@ class RollViewModel @Inject constructor(
                 val items = pickMultiple(slot.category, slot.count)
                 if (slot.count == 1) {
                     results.add(RollResult(
-                        label = slot.category.displayName,
+                        label = slot.category,
                         category = slot.category,
                         item = items.firstOrNull(),
                     ))
                 } else {
                     items.forEachIndexed { index, item ->
                         results.add(RollResult(
-                            label = "${slot.category.displayName} #${index + 1}",
+                            label = "${slot.category} #${index + 1}",
                             category = slot.category,
                             item = item,
                         ))
@@ -83,7 +82,7 @@ class RollViewModel @Inject constructor(
                     // Fill remaining slots if fewer items than count
                     repeat(slot.count - items.size) { i ->
                         results.add(RollResult(
-                            label = "${slot.category.displayName} #${items.size + i + 1}",
+                            label = "${slot.category} #${items.size + i + 1}",
                             category = slot.category,
                             item = null,
                         ))
@@ -105,7 +104,7 @@ class RollViewModel @Inject constructor(
         }
     }
 
-    private suspend fun pickMultiple(category: Category, count: Int): List<Item> {
+    private suspend fun pickMultiple(category: String, count: Int): List<Item> {
         val available = itemRepository.observeEnabled(category).first().toMutableList()
         val picked = mutableListOf<Item>()
         repeat(count) {

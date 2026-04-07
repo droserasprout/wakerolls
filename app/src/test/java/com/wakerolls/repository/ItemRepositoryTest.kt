@@ -3,7 +3,6 @@ package com.wakerolls.repository
 import com.wakerolls.data.db.dao.ItemDao
 import com.wakerolls.data.db.entity.ItemEntity
 import com.wakerolls.data.repository.ItemRepository
-import com.wakerolls.domain.model.Category
 import com.wakerolls.domain.model.Item
 import com.wakerolls.domain.model.Rarity
 import io.mockk.coEvery
@@ -24,7 +23,7 @@ class ItemRepositoryTest {
     private val entity = ItemEntity(
         id = 1L,
         name = "Eggs",
-        category = Category.BREAKFAST,
+        category = "Breakfast",
         rarity = Rarity.COMMON,
         enabled = true,
     )
@@ -37,7 +36,7 @@ class ItemRepositoryTest {
             val items = awaitItem()
             assertEquals(1, items.size)
             assertEquals("Eggs", items[0].name)
-            assertEquals(Category.BREAKFAST, items[0].category)
+            assertEquals("Breakfast", items[0].category)
             awaitComplete()
         }
     }
@@ -46,7 +45,7 @@ class ItemRepositoryTest {
     fun `save calls dao insert`() = runTest {
         coEvery { dao.insert(any()) } returns 1L
 
-        val item = Item(name = "Eggs", category = Category.BREAKFAST, rarity = Rarity.COMMON)
+        val item = Item(name = "Eggs", category = "Breakfast", rarity = Rarity.COMMON)
         repo.save(item)
 
         coVerify { dao.insert(ItemEntity.fromDomain(item)) }
@@ -56,7 +55,7 @@ class ItemRepositoryTest {
     fun `update calls dao update`() = runTest {
         coEvery { dao.update(any()) } returns Unit
 
-        val item = Item(id = 1L, name = "Eggs", category = Category.BREAKFAST, rarity = Rarity.COMMON)
+        val item = Item(id = 1L, name = "Eggs", category = "Breakfast", rarity = Rarity.COMMON)
         repo.update(item)
 
         coVerify { dao.update(ItemEntity.fromDomain(item)) }

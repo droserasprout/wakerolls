@@ -72,7 +72,7 @@ fun ScenariosTab(state: LibraryUiState, viewModel: LibraryViewModel) {
 
 @Composable
 private fun ScenarioCard(scenario: Scenario, onClick: () -> Unit) {
-    val slotSummary = scenario.slots.joinToString(", ") { "${it.count}x ${it.category.displayName}" }
+    val slotSummary = scenario.slots.joinToString(", ") { "${it.count}x ${it.category}" }
 
     Row(
         modifier = Modifier

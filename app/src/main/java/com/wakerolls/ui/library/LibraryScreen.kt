@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.wakerolls.domain.model.Category
 import com.wakerolls.domain.model.Item
 import com.wakerolls.ui.roll.RarityBadge
 import com.wakerolls.ui.roll.color
@@ -90,7 +89,11 @@ fun LibraryScreen(padding: PaddingValues, viewModel: LibraryViewModel = hiltView
     state.editingItem?.let { editItem ->
         ItemEditDialog(
             item = editItem,
+            categories = state.categories,
             onSave = { viewModel.onSaveItem(it) },
+            onDelete = if (editItem.id != 0L) {
+                { viewModel.onDeleteClick(editItem); viewModel.onDismissEdit() }
+            } else null,
             onDismiss = { viewModel.onDismissEdit() },
         )
     }
@@ -117,6 +120,7 @@ fun LibraryScreen(padding: PaddingValues, viewModel: LibraryViewModel = hiltView
     state.editingScenario?.let { editScenario ->
         ScenarioEditDialog(
             scenario = editScenario,
+            categories = state.categories,
             onSave = { viewModel.onSaveScenario(it) },
             onDismiss = { viewModel.onDismissScenarioEdit() },
         )
@@ -202,9 +206,9 @@ fun ItemsTab(state: LibraryUiState, viewModel: LibraryViewModel) {
 }
 
 @Composable
-private fun CategoryHeader(category: Category) {
+private fun CategoryHeader(category: String) {
     Text(
-        text = category.displayName.uppercase(),
+        text = category.uppercase(),
         style = MaterialTheme.typography.labelSmall,
         letterSpacing = 2.sp,
         color = TextSecondary,

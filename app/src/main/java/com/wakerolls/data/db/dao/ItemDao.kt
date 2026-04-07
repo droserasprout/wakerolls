@@ -2,7 +2,6 @@ package com.wakerolls.data.db.dao
 
 import androidx.room.*
 import com.wakerolls.data.db.entity.ItemEntity
-import com.wakerolls.domain.model.Category
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -11,7 +10,10 @@ interface ItemDao {
     fun observeAll(): Flow<List<ItemEntity>>
 
     @Query("SELECT * FROM items WHERE category = :category AND enabled = 1")
-    fun observeEnabled(category: Category): Flow<List<ItemEntity>>
+    fun observeEnabled(category: String): Flow<List<ItemEntity>>
+
+    @Query("SELECT DISTINCT category FROM items ORDER BY category")
+    fun observeCategories(): Flow<List<String>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: ItemEntity): Long

@@ -83,10 +83,10 @@ fun RollScreen(padding: PaddingValues, viewModel: RollViewModel = hiltViewModel(
                 val scenario = state.scenarios.find { it.id == state.selectedScenarioId }
                 scenario?.slots?.forEach { slot ->
                     if (slot.count == 1) {
-                        RollCard(label = slot.category.displayName, item = null)
+                        RollCard(label = slot.category, item = null)
                     } else {
                         repeat(slot.count) { i ->
-                            RollCard(label = "${slot.category.displayName} #${i + 1}", item = null)
+                            RollCard(label = "${slot.category} #${i + 1}", item = null)
                         }
                     }
                 }
@@ -189,4 +189,5 @@ fun Rarity.color(): Color = when (this) {
     Rarity.COMMON -> RarityCommon
     Rarity.UNCOMMON -> RarityUncommon
     Rarity.RARE -> RarityRare
+    Rarity.LEGENDARY -> RarityLegendary
 }

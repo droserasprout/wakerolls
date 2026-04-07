@@ -8,6 +8,6 @@ data class Scenario(
 
 data class ScenarioSlot(
     val id: Long = 0,
-    val category: Category,
+    val category: String,
     val count: Int = 1,
 )
