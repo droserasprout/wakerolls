@@ -10,8 +10,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +30,7 @@ import com.wakerolls.ui.theme.*
 @Composable
 fun LibraryScreen(padding: PaddingValues, viewModel: LibraryViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     Box(
         modifier = Modifier
@@ -44,63 +46,47 @@ fun LibraryScreen(padding: PaddingValues, viewModel: LibraryViewModel = hiltView
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
             Spacer(Modifier.height(16.dp))
-            LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
-                state.grouped.forEach { (category, items) ->
-                    item {
-                        CategoryHeader(category)
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    items(items, key = { it.id }) { item ->
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = {
-                                if (it == SwipeToDismissBoxValue.EndToStart) {
-                                    viewModel.onDeleteClick(item)
-                                }
-                                false // Don't actually dismiss, let the dialog handle it
-                            }
-                        )
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            backgroundContent = {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(AccentCoral.copy(alpha = 0.3f))
-                                        .padding(horizontal = 20.dp),
-                                    contentAlignment = Alignment.CenterEnd,
-                                ) {
-                                    Icon(Icons.Filled.Delete, "Delete", tint = AccentCoral)
-                                }
-                            },
-                            enableDismissFromStartToEnd = false,
-                        ) {
-                            LibraryItemRow(
-                                item = item,
-                                onEdit = { viewModel.onEditClick(item) },
-                                onToggle = { viewModel.toggleEnabled(item) },
-                            )
-                        }
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    item { Spacer(Modifier.height(12.dp)) }
-                }
-            }
-        }
 
-        FloatingActionButton(
-            onClick = { viewModel.onAddClick() },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(20.dp),
-            containerColor = AccentGold,
-            contentColor = DarkBackground,
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = "Add item")
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = DarkSurfaceVariant,
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        color = AccentGold,
+                    )
+                },
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = {
+                        Text(
+                            "Items",
+                            color = if (selectedTab == 0) AccentGold else TextSecondary,
+                        )
+                    },
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = {
+                        Text(
+                            "Scenarios",
+                            color = if (selectedTab == 1) AccentGold else TextSecondary,
+                        )
+                    },
+                )
+            }
+
+            when (selectedTab) {
+                0 -> ItemsTab(state, viewModel)
+                1 -> ScenariosTab(state, viewModel)
+            }
         }
     }
 
-    // Edit / Add dialog
+    // Item Edit / Add dialog
     state.editingItem?.let { editItem ->
         ItemEditDialog(
             item = editItem,
@@ -109,7 +95,7 @@ fun LibraryScreen(padding: PaddingValues, viewModel: LibraryViewModel = hiltView
         )
     }
 
-    // Delete confirmation
+    // Item delete confirmation
     state.showDeleteConfirm?.let { deleteItem ->
         AlertDialog(
             onDismissRequest = { viewModel.onDismissDelete() },
@@ -125,6 +111,93 @@ fun LibraryScreen(padding: PaddingValues, viewModel: LibraryViewModel = hiltView
             },
             containerColor = DarkSurface,
         )
+    }
+
+    // Scenario Edit / Add dialog
+    state.editingScenario?.let { editScenario ->
+        ScenarioEditDialog(
+            scenario = editScenario,
+            onSave = { viewModel.onSaveScenario(it) },
+            onDismiss = { viewModel.onDismissScenarioEdit() },
+        )
+    }
+
+    // Scenario delete confirmation
+    state.showDeleteScenarioConfirm?.let { deleteScenario ->
+        AlertDialog(
+            onDismissRequest = { viewModel.onDismissDeleteScenario() },
+            title = { Text("Delete scenario?", color = TextPrimary) },
+            text = { Text("Delete \"${deleteScenario.name}\"?", color = TextSecondary) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onConfirmDeleteScenario() }) {
+                    Text("Delete", color = AccentCoral)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onDismissDeleteScenario() }) { Text("Cancel") }
+            },
+            containerColor = DarkSurface,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ItemsTab(state: LibraryUiState, viewModel: LibraryViewModel) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
+            state.grouped.forEach { (category, items) ->
+                item {
+                    CategoryHeader(category)
+                    Spacer(Modifier.height(8.dp))
+                }
+                items(items, key = { it.id }) { item ->
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = {
+                            if (it == SwipeToDismissBoxValue.EndToStart) {
+                                viewModel.onDeleteClick(item)
+                            }
+                            false
+                        }
+                    )
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        backgroundContent = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(AccentCoral.copy(alpha = 0.3f))
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.CenterEnd,
+                            ) {
+                                Icon(Icons.Filled.Delete, "Delete", tint = AccentCoral)
+                            }
+                        },
+                        enableDismissFromStartToEnd = false,
+                    ) {
+                        LibraryItemRow(
+                            item = item,
+                            onEdit = { viewModel.onEditClick(item) },
+                            onToggle = { viewModel.toggleEnabled(item) },
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+                item { Spacer(Modifier.height(12.dp)) }
+            }
+        }
+
+        FloatingActionButton(
+            onClick = { viewModel.onAddClick() },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(20.dp),
+            containerColor = AccentGold,
+            contentColor = DarkBackground,
+        ) {
+            Icon(Icons.Filled.Add, contentDescription = "Add item")
+        }
     }
 }
 
