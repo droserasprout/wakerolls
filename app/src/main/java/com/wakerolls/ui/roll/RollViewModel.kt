@@ -146,34 +146,31 @@ class RollViewModel @Inject constructor(
                 delay(500) // wait for shrink animation
             }
 
-            val results: MutableList<RollResult>
-            if (state.hasRolled && state.results.isNotEmpty()) {
-                // Reroll: keep completed cards, re-pick the rest
-                results = state.results.toMutableList()
-                for (i in results.indices) {
-                    if (results[i].completed) continue
-                    val category = results[i].category
-                    val items = itemRepository.observeEnabled(category).first()
-                    val weights = _uiState.value.weights
-                    val picked = if (items.isEmpty()) null else Rarity.weightedRandom(items, weights) { it.rarity }
-                    picked?.let { itemRepository.incrementRolled(it.id) }
-                    results[i] = RollResult(label = category, category = category, item = picked)
-                }
-            } else {
-                // First roll
-                results = mutableListOf()
-                for (slot in scenario.slots) {
-                    val items = pickMultiple(slot.category, slot.count)
+            // Build results from scenario slots, preserving completed cards from previous roll
+            val completedByCategory = if (state.hasRolled) {
+                state.results.filter { it.completed }.groupBy { it.category }
+                    .mapValues { (_, v) -> v.toMutableList() }
+                    .toMutableMap()
+            } else mutableMapOf()
+
+            val results = mutableListOf<RollResult>()
+            for (slot in scenario.slots) {
+                val kept = completedByCategory[slot.category] ?: mutableListOf()
+                val keptCount = minOf(kept.size, slot.count)
+                repeat(keptCount) { results.add(kept.removeFirst()) }
+                val toRoll = slot.count - keptCount
+                if (toRoll > 0) {
+                    val items = pickMultiple(slot.category, toRoll)
                     items.forEach { item ->
+                        itemRepository.incrementRolled(item.id)
                         results.add(RollResult(label = slot.category, category = slot.category, item = item))
                     }
-                    repeat(slot.count - items.size) {
+                    repeat(toRoll - items.size) {
                         results.add(RollResult(label = slot.category, category = slot.category, item = null))
                     }
                 }
-                results.shuffle()
-                results.forEach { r -> r.item?.let { itemRepository.incrementRolled(it.id) } }
             }
+            results.shuffle()
             _uiState.value = _uiState.value.copy(
                 results = results,
                 isRolling = false,
