@@ -12,8 +12,10 @@ data class ItemEntity(
     val category: String,
     val rarity: Rarity,
     val enabled: Boolean = true,
+    val rolledCount: Int = 0,
+    val completedCount: Int = 0,
 ) {
-    fun toDomain() = Item(id = id, name = name, category = category, rarity = rarity, enabled = enabled)
+    fun toDomain() = Item(id = id, name = name, category = category, rarity = rarity, enabled = enabled, rolledCount = rolledCount, completedCount = completedCount)
 
     companion object {
         fun fromDomain(item: Item) = ItemEntity(
@@ -22,6 +24,8 @@ data class ItemEntity(
             category = item.category,
             rarity = item.rarity,
             enabled = item.enabled,
+            rolledCount = item.rolledCount,
+            completedCount = item.completedCount,
         )
     }
 }

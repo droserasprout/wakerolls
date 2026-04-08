@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wakerolls.data.ImportExportManager
+import com.wakerolls.data.repository.ItemRepository
 import com.wakerolls.domain.model.Rarity
 import com.wakerolls.worker.DailyRollWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,6 +41,7 @@ class SettingsViewModel @Inject constructor(
     private val dataStore: DataStore<Preferences>,
     @ApplicationContext private val context: Context,
     private val importExportManager: ImportExportManager,
+    private val itemRepository: ItemRepository,
 ) : ViewModel() {
 
     private val _importExportMessage = MutableStateFlow<String?>(null)
@@ -116,6 +118,13 @@ class SettingsViewModel @Inject constructor(
     fun setWeight(rarity: Rarity, weight: Int) {
         viewModelScope.launch {
             dataStore.edit { it[weightKey(rarity)] = weight.coerceAtLeast(0) }
+        }
+    }
+
+    fun resetAllStats() {
+        viewModelScope.launch {
+            itemRepository.resetAllStats()
+            _importExportMessage.value = "All statistics reset"
         }
     }
 

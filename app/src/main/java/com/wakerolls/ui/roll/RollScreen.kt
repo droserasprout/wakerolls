@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -89,7 +91,7 @@ fun RollScreen(viewModel: RollViewModel = hiltViewModel()) {
             if (state.results.isNotEmpty()) {
                 state.results.forEachIndexed { index, result ->
                     val showReroll = state.allowRerolls && state.allowPartialRerolls
-                            && state.rerollsLeft > 0 && result.item != null
+                            && state.rerollsLeft > 0 && result.item != null && !result.completed
                     key(state.rollGeneration, index) {
                         AnimatedRollCard(
                             label = result.label,
@@ -97,6 +99,9 @@ fun RollScreen(viewModel: RollViewModel = hiltViewModel()) {
                             index = index,
                             showReroll = showReroll,
                             onReroll = { viewModel.reroll(index) },
+                            completed = result.completed,
+                            onComplete = { viewModel.complete(index) },
+                            onUncomplete = { viewModel.uncomplete(index) },
                             isExiting = state.isRolling,
                             animate = state.enableAnimations,
                         )
@@ -167,6 +172,9 @@ private fun AnimatedRollCard(
     index: Int,
     showReroll: Boolean,
     onReroll: () -> Unit,
+    completed: Boolean,
+    onComplete: () -> Unit,
+    onUncomplete: () -> Unit,
     isExiting: Boolean,
     animate: Boolean,
 ) {
@@ -204,6 +212,9 @@ private fun AnimatedRollCard(
             item = item,
             showReroll = showReroll,
             onReroll = onReroll,
+            completed = completed,
+            onComplete = onComplete,
+            onUncomplete = onUncomplete,
         )
     }
 }
@@ -214,9 +225,12 @@ fun RollCard(
     item: Item?,
     showReroll: Boolean = false,
     onReroll: (() -> Unit)? = null,
+    completed: Boolean = false,
+    onComplete: (() -> Unit)? = null,
+    onUncomplete: (() -> Unit)? = null,
 ) {
-    val rarityColor = item?.rarity?.color() ?: TextSecondary
-    val glowLevel = item?.rarity?.glowLevel() ?: 0f
+    val rarityColor = if (completed) TextSecondary else (item?.rarity?.color() ?: TextSecondary)
+    val glowLevel = if (completed) 0f else (item?.rarity?.glowLevel() ?: 0f)
 
     Box(
         modifier = Modifier
@@ -288,7 +302,7 @@ fun RollCard(
                 }
             }
 
-            // Item name + reroll button
+            // Item name + action buttons
             if (item != null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -298,20 +312,49 @@ fun RollCard(
                     Text(
                         text = item.name,
                         style = MaterialTheme.typography.headlineMedium,
-                        color = TextPrimary,
+                        color = if (completed) TextSecondary else TextPrimary,
                         modifier = Modifier.weight(1f),
                     )
-                    if (showReroll && onReroll != null) {
-                        IconButton(
-                            onClick = onReroll,
-                            modifier = Modifier.size(36.dp),
-                        ) {
-                            Icon(
-                                Icons.Default.Refresh,
-                                contentDescription = "Reroll",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(20.dp),
-                            )
+                    if (completed) {
+                        if (onUncomplete != null) {
+                            IconButton(
+                                onClick = onUncomplete,
+                                modifier = Modifier.size(36.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Undo complete",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                    } else {
+                        if (showReroll && onReroll != null) {
+                            IconButton(
+                                onClick = onReroll,
+                                modifier = Modifier.size(36.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = "Reroll",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                        if (onComplete != null) {
+                            IconButton(
+                                onClick = onComplete,
+                                modifier = Modifier.size(36.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = "Complete",
+                                    tint = AccentTeal,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
                         }
                     }
                 }

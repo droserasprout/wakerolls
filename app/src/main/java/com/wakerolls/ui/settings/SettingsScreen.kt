@@ -248,6 +248,22 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             }
         }
 
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(DarkSurface)
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Statistics", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = { viewModel.resetAllStats() }) {
+                Text("Reset all", color = AccentCoral)
+            }
+        }
+
         Spacer(Modifier.height(24.dp))
 
         if (showTimePicker) {

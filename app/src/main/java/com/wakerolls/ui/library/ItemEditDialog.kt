@@ -1,6 +1,7 @@
 package com.wakerolls.ui.library
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -23,6 +24,7 @@ fun ItemEditDialog(
     categories: List<String>,
     onSave: (Item) -> Unit,
     onDelete: (() -> Unit)?,
+    onResetStats: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     var name by remember { mutableStateOf(item.name) }
@@ -133,6 +135,30 @@ fun ItemEditDialog(
                                 selectedBorderColor = rarityColor.copy(alpha = 0.5f),
                             ),
                         )
+                    }
+                }
+
+                if (item.id != 0L) {
+                    Text("Statistics", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column {
+                            Text("Rolled", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                            Text(item.rolledCount.toString(), style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                        }
+                        Column {
+                            Text("Completed", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                            Text(item.completedCount.toString(), style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        if (onResetStats != null && (item.rolledCount > 0 || item.completedCount > 0)) {
+                            TextButton(onClick = onResetStats) {
+                                Text("Reset", color = AccentCoral)
+                            }
+                        }
                     }
                 }
 

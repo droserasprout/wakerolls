@@ -33,6 +33,7 @@ data class RollResult(
     val label: String,
     val category: String,
     val item: Item?,
+    val completed: Boolean = false,
 )
 
 data class RollUiState(
@@ -145,17 +146,34 @@ class RollViewModel @Inject constructor(
                 delay(500) // wait for shrink animation
             }
 
-            val results = mutableListOf<RollResult>()
-            for (slot in scenario.slots) {
-                val items = pickMultiple(slot.category, slot.count)
-                items.forEach { item ->
-                    results.add(RollResult(label = slot.category, category = slot.category, item = item))
+            val results: MutableList<RollResult>
+            if (state.hasRolled && state.results.isNotEmpty()) {
+                // Reroll: keep completed cards, re-pick the rest
+                results = state.results.toMutableList()
+                for (i in results.indices) {
+                    if (results[i].completed) continue
+                    val category = results[i].category
+                    val items = itemRepository.observeEnabled(category).first()
+                    val weights = _uiState.value.weights
+                    val picked = if (items.isEmpty()) null else Rarity.weightedRandom(items, weights) { it.rarity }
+                    picked?.let { itemRepository.incrementRolled(it.id) }
+                    results[i] = RollResult(label = category, category = category, item = picked)
                 }
-                repeat(slot.count - items.size) {
-                    results.add(RollResult(label = slot.category, category = slot.category, item = null))
+            } else {
+                // First roll
+                results = mutableListOf()
+                for (slot in scenario.slots) {
+                    val items = pickMultiple(slot.category, slot.count)
+                    items.forEach { item ->
+                        results.add(RollResult(label = slot.category, category = slot.category, item = item))
+                    }
+                    repeat(slot.count - items.size) {
+                        results.add(RollResult(label = slot.category, category = slot.category, item = null))
+                    }
                 }
+                results.shuffle()
+                results.forEach { r -> r.item?.let { itemRepository.incrementRolled(it.id) } }
             }
-            results.shuffle()
             _uiState.value = _uiState.value.copy(
                 results = results,
                 isRolling = false,
@@ -185,6 +203,29 @@ class RollViewModel @Inject constructor(
         }
     }
 
+    fun complete(index: Int) {
+        val current = _uiState.value.results.getOrNull(index) ?: return
+        if (current.completed || current.item == null) return
+        viewModelScope.launch {
+            itemRepository.incrementCompleted(current.item.id)
+            val updated = _uiState.value.results.toMutableList()
+            updated[index] = current.copy(completed = true)
+            _uiState.value = _uiState.value.copy(results = updated)
+            _uiState.value.selectedScenarioId?.let { saveResults(it, updated) }
+        }
+    }
+
+    fun uncomplete(index: Int) {
+        val current = _uiState.value.results.getOrNull(index) ?: return
+        if (!current.completed) return
+        val updated = _uiState.value.results.toMutableList()
+        updated[index] = current.copy(completed = false)
+        _uiState.value = _uiState.value.copy(results = updated)
+        viewModelScope.launch {
+            _uiState.value.selectedScenarioId?.let { saveResults(it, updated) }
+        }
+    }
+
     private suspend fun consumeReroll() {
         if (_uiState.value.rerollsPerDay == 0) return // unlimited
         _uiState.value = _uiState.value.copy(rerollsLeft = (_uiState.value.rerollsLeft - 1).coerceAtLeast(0))
@@ -210,12 +251,12 @@ class RollViewModel @Inject constructor(
         return picked
     }
 
-    // Persistence: encode results as "label\tcategory\titemId;..." (-1 for null item)
+    // Persistence: encode results as "label\tcategory\titemId\tcompleted;..."
     private suspend fun saveResults(scenarioId: Long, results: List<RollResult>) {
         dataStore.edit { prefs ->
             prefs[KEY_SAVED_SCENARIO_ID] = scenarioId
             prefs[KEY_SAVED_RESULTS] = results.joinToString(";") { r ->
-                "${r.label}\t${r.category}\t${r.item?.id ?: -1}"
+                "${r.label}\t${r.category}\t${r.item?.id ?: -1}\t${if (r.completed) 1 else 0}"
             }
         }
     }
@@ -226,18 +267,21 @@ class RollViewModel @Inject constructor(
         val savedResults = prefs[KEY_SAVED_RESULTS] ?: return
         if (savedResults.isBlank()) return
 
+        data class SavedEntry(val label: String, val category: String, val itemId: Long, val completed: Boolean)
         val entries = savedResults.split(";").mapNotNull { entry ->
             val parts = entry.split("\t")
-            if (parts.size != 3) return@mapNotNull null
-            Triple(parts[0], parts[1], parts[2].toLongOrNull() ?: return@mapNotNull null)
+            if (parts.size < 3) return@mapNotNull null
+            val itemId = parts[2].toLongOrNull() ?: return@mapNotNull null
+            val completed = parts.getOrNull(3) == "1"
+            SavedEntry(parts[0], parts[1], itemId, completed)
         }
         if (entries.isEmpty()) return
 
-        val itemIds = entries.mapNotNull { (_, _, id) -> if (id != -1L) id else null }
+        val itemIds = entries.mapNotNull { if (it.itemId != -1L) it.itemId else null }
         val itemMap = if (itemIds.isNotEmpty()) itemRepository.getByIds(itemIds) else emptyMap()
 
-        val results = entries.map { (label, category, itemId) ->
-            RollResult(label = label, category = category, item = itemMap[itemId])
+        val results = entries.map { e ->
+            RollResult(label = e.label, category = e.category, item = itemMap[e.itemId], completed = e.completed)
         }
 
         _uiState.value = _uiState.value.copy(

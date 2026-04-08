@@ -99,6 +99,15 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    fun onResetItemStats(item: Item) {
+        viewModelScope.launch {
+            repository.resetStats(item.id)
+            _dialogState.value = _dialogState.value.copy(
+                editingItem = item.copy(rolledCount = 0, completedCount = 0)
+            )
+        }
+    }
+
     fun onAddClick() {
         _dialogState.value = _dialogState.value.copy(
             editingItem = Item(name = "", category = "", rarity = Rarity.COMMON)

@@ -6,4 +6,6 @@ data class Item(
     val category: String,
     val rarity: Rarity,
     val enabled: Boolean = true,
+    val rolledCount: Int = 0,
+    val completedCount: Int = 0,
 )

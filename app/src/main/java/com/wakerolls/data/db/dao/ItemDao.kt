@@ -33,6 +33,18 @@ interface ItemDao {
     @Query("SELECT * FROM items ORDER BY category, name")
     suspend fun getAll(): List<ItemEntity>
 
+    @Query("UPDATE items SET rolledCount = rolledCount + 1 WHERE id = :id")
+    suspend fun incrementRolled(id: Long)
+
+    @Query("UPDATE items SET completedCount = completedCount + 1 WHERE id = :id")
+    suspend fun incrementCompleted(id: Long)
+
+    @Query("UPDATE items SET rolledCount = 0, completedCount = 0")
+    suspend fun resetAllStats()
+
+    @Query("UPDATE items SET rolledCount = 0, completedCount = 0 WHERE id = :id")
+    suspend fun resetStats(id: Long)
+
     @Query("DELETE FROM items")
     suspend fun deleteAll()
 

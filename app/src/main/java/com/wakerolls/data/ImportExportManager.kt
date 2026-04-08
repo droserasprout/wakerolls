@@ -26,6 +26,8 @@ class ImportExportManager @Inject constructor(
                 put("category", item.category)
                 put("rarity", item.rarity.name)
                 put("enabled", item.enabled)
+                put("rolledCount", item.rolledCount)
+                put("completedCount", item.completedCount)
             })
         }
         root.put("items", itemsArray)
@@ -62,6 +64,8 @@ class ImportExportManager @Inject constructor(
                     category = obj.getString("category"),
                     rarity = Rarity.valueOf(obj.getString("rarity")),
                     enabled = obj.optBoolean("enabled", true),
+                    rolledCount = obj.optInt("rolledCount", 0),
+                    completedCount = obj.optInt("completedCount", 0),
                 ))
             }
             itemRepository.deleteAll()

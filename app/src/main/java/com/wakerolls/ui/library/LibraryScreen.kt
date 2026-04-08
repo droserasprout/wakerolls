@@ -110,6 +110,9 @@ fun ItemsScreen(viewModel: LibraryViewModel = hiltViewModel()) {
             onDelete = if (editItem.id != 0L) {
                 { viewModel.onDeleteClick(editItem); viewModel.onDismissEdit() }
             } else null,
+            onResetStats = if (editItem.id != 0L) {
+                { viewModel.onResetItemStats(editItem) }
+            } else null,
             onDismiss = { viewModel.onDismissEdit() },
         )
     }

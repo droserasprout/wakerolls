@@ -30,6 +30,14 @@ class ItemRepository @Inject constructor(private val dao: ItemDao) {
 
     suspend fun delete(item: Item) { dao.delete(ItemEntity.fromDomain(item)) }
 
+    suspend fun incrementRolled(id: Long) { dao.incrementRolled(id) }
+
+    suspend fun incrementCompleted(id: Long) { dao.incrementCompleted(id) }
+
+    suspend fun resetAllStats() { dao.resetAllStats() }
+
+    suspend fun resetStats(id: Long) { dao.resetStats(id) }
+
     suspend fun deleteAll() { dao.deleteAll() }
 
     suspend fun insertAll(items: List<Item>) { dao.insertAll(items.map { ItemEntity.fromDomain(it) }) }
