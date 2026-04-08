@@ -267,6 +267,10 @@ class RollViewModel @Inject constructor(
         val savedResults = prefs[KEY_SAVED_RESULTS] ?: return
         if (savedResults.isBlank()) return
 
+        // Validate scenario still exists
+        val scenarios = _uiState.value.scenarios
+        if (scenarios.none { it.id == savedScenarioId }) return
+
         data class SavedEntry(val label: String, val category: String, val itemId: Long, val completed: Boolean)
         val entries = savedResults.split(";").mapNotNull { entry ->
             val parts = entry.split("\t")
@@ -280,9 +284,12 @@ class RollViewModel @Inject constructor(
         val itemIds = entries.mapNotNull { if (it.itemId != -1L) it.itemId else null }
         val itemMap = if (itemIds.isNotEmpty()) itemRepository.getByIds(itemIds) else emptyMap()
 
-        val results = entries.map { e ->
-            RollResult(label = e.label, category = e.category, item = itemMap[e.itemId], completed = e.completed)
+        // Drop entries whose items no longer exist
+        val results = entries.mapNotNull { e ->
+            val item = if (e.itemId == -1L) null else itemMap[e.itemId] ?: return@mapNotNull null
+            RollResult(label = e.label, category = e.category, item = item, completed = e.completed)
         }
+        if (results.isEmpty()) return
 
         _uiState.value = _uiState.value.copy(
             selectedScenarioId = savedScenarioId,
