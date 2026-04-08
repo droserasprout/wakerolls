@@ -1,4 +1,4 @@
-JAVA_HOME := /usr/lib/jvm/java-17-openjdk
+JAVA_HOME := /usr/lib/jvm/java-21-openjdk
 ANDROID_HOME := $(HOME)/Android/Sdk
 GRADLEW := JAVA_HOME=$(JAVA_HOME) ANDROID_HOME=$(ANDROID_HOME) ./gradlew
 

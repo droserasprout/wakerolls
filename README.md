@@ -39,7 +39,7 @@ Weights are configurable in Settings. When a scenario slot requests multiple ite
 
 ## Requirements
 
-- JDK 17 (`/usr/lib/jvm/java-17-openjdk`)
+- JDK 21 (`/usr/lib/jvm/java-21-openjdk`)
 - Android SDK (`~/Android/Sdk`)
 
 ## Build
