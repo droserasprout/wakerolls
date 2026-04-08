@@ -1,6 +1,7 @@
 package com.wakerolls.di
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
@@ -29,7 +30,11 @@ object AppModule {
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "wakerolls.db")
-            .fallbackToDestructiveMigration()
+            .addCallback(object : androidx.room.RoomDatabase.Callback() {
+                override fun onDestructiveMigration(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                    Log.e("WakerollsDB", "Destructive migration triggered — database was wiped due to schema change without migration")
+                }
+            })
             .build()
 
     @Provides

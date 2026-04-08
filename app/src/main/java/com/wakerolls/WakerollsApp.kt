@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.wakerolls.di.DataSeeder
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -14,7 +13,6 @@ import javax.inject.Inject
 class WakerollsApp : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
-    @Inject lateinit var dataSeeder: DataSeeder
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -24,7 +22,6 @@ class WakerollsApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        dataSeeder.seedIfNeeded()
     }
 
     private fun createNotificationChannel() {
