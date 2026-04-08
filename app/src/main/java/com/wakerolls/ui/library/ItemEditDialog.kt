@@ -88,8 +88,10 @@ fun ItemEditDialog(
                         modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = AccentGold,
+                            unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f),
                             cursorColor = AccentGold,
                             focusedLabelColor = AccentGold,
+                            unfocusedLabelColor = TextSecondary,
                         ),
                     )
                     ExposedDropdownMenu(
@@ -119,7 +121,7 @@ fun ItemEditDialog(
                         FilterChip(
                             selected = rarity == r,
                             onClick = { rarity = r },
-                            label = { Text(r.name, color = rarityColor) },
+                            label = { Text(r.name, color = if (rarity == r) rarityColor else TextSecondary) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = rarityColor.copy(alpha = 0.15f),
                                 containerColor = Color.Transparent,
