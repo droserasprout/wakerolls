@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.graphics.Color
 import com.wakerolls.domain.model.Item
 import com.wakerolls.domain.model.Rarity
 import com.wakerolls.ui.roll.color
@@ -65,8 +66,10 @@ fun ItemEditDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = AccentGold,
+                        unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f),
                         cursorColor = AccentGold,
                         focusedLabelColor = AccentGold,
+                        unfocusedLabelColor = TextSecondary,
                     ),
                 )
 
@@ -116,25 +119,17 @@ fun ItemEditDialog(
                         FilterChip(
                             selected = rarity == r,
                             onClick = { rarity = r },
-                            label = { Text(r.name) },
+                            label = { Text(r.name, color = rarityColor) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = rarityColor.copy(alpha = 0.15f),
-                                selectedLabelColor = rarityColor,
-                                labelColor = TextSecondary,
+                                containerColor = Color.Transparent,
                             ),
-                            border = if (rarity == r) {
-                                FilterChipDefaults.filterChipBorder(
-                                    enabled = true,
-                                    selected = true,
-                                    borderColor = rarityColor.copy(alpha = 0.5f),
-                                    selectedBorderColor = rarityColor.copy(alpha = 0.5f),
-                                )
-                            } else {
-                                FilterChipDefaults.filterChipBorder(
-                                    enabled = true,
-                                    selected = false,
-                                )
-                            },
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = rarity == r,
+                                borderColor = rarityColor.copy(alpha = 0.3f),
+                                selectedBorderColor = rarityColor.copy(alpha = 0.5f),
+                            ),
                         )
                     }
                 }

@@ -62,8 +62,10 @@ fun ScenarioEditDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = AccentGold,
+                        unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f),
                         cursorColor = AccentGold,
                         focusedLabelColor = AccentGold,
+                        unfocusedLabelColor = TextSecondary,
                     ),
                 )
 
@@ -136,83 +138,73 @@ private fun SlotRow(
         it.contains(slot.category, ignoreCase = true) && it != slot.category
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ExposedDropdownMenuBox(
+            expanded = expanded && suggestions.isNotEmpty(),
+            onExpandedChange = { expanded = it },
+            modifier = Modifier.weight(1f),
         ) {
-            ExposedDropdownMenuBox(
+            OutlinedTextField(
+                value = slot.category,
+                onValueChange = {
+                    onCategoryChange(it)
+                    expanded = true
+                },
+                label = { Text("Category") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentGold,
+                    unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f),
+                    cursorColor = AccentGold,
+                    focusedLabelColor = AccentGold,
+                    unfocusedLabelColor = TextSecondary,
+                ),
+            )
+            ExposedDropdownMenu(
                 expanded = expanded && suggestions.isNotEmpty(),
-                onExpandedChange = { expanded = it },
-                modifier = Modifier.weight(1f),
+                onDismissRequest = { expanded = false },
+                containerColor = DarkSurfaceVariant,
             ) {
-                OutlinedTextField(
-                    value = slot.category,
-                    onValueChange = {
-                        onCategoryChange(it)
-                        expanded = true
-                    },
-                    label = { Text("Category") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentGold,
-                        cursorColor = AccentGold,
-                        focusedLabelColor = AccentGold,
-                    ),
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded && suggestions.isNotEmpty(),
-                    onDismissRequest = { expanded = false },
-                    containerColor = DarkSurfaceVariant,
-                ) {
-                    suggestions.forEach { suggestion ->
-                        DropdownMenuItem(
-                            text = { Text(suggestion, color = TextPrimary) },
-                            onClick = {
-                                onCategoryChange(suggestion)
-                                expanded = false
-                            },
-                        )
-                    }
+                suggestions.forEach { suggestion ->
+                    DropdownMenuItem(
+                        text = { Text(suggestion, color = TextPrimary) },
+                        onClick = {
+                            onCategoryChange(suggestion)
+                            expanded = false
+                        },
+                    )
                 }
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Close, contentDescription = "Remove slot", tint = AccentCoral)
-            }
         }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        IconButton(
+            onClick = { onCountChange(-1) },
+            enabled = slot.count > 1,
+            modifier = Modifier.size(32.dp),
         ) {
-            Text("Count:", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-            IconButton(
-                onClick = { onCountChange(-1) },
-                enabled = slot.count > 1,
-            ) {
-                Text(
-                    "\u2212",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = if (slot.count > 1) TextPrimary else TextSecondary,
-                )
-            }
-            Text(
-                text = slot.count.toString(),
-                style = MaterialTheme.typography.titleMedium,
-                color = TextPrimary,
-            )
-            IconButton(
-                onClick = { onCountChange(1) },
-                enabled = slot.count < 5,
-            ) {
-                Text(
-                    "+",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = if (slot.count < 5) TextPrimary else TextSecondary,
-                )
-            }
+            Text("\u2212", style = MaterialTheme.typography.titleMedium,
+                color = if (slot.count > 1) TextPrimary else TextSecondary)
         }
-        HorizontalDivider(color = DarkSurfaceVariant)
+        Text(
+            text = slot.count.toString(),
+            style = MaterialTheme.typography.titleMedium,
+            color = AccentGold,
+            modifier = Modifier.width(24.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        IconButton(
+            onClick = { onCountChange(1) },
+            enabled = slot.count < 5,
+            modifier = Modifier.size(32.dp),
+        ) {
+            Text("+", style = MaterialTheme.typography.titleMedium,
+                color = if (slot.count < 5) TextPrimary else TextSecondary)
+        }
+        IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+            Icon(Icons.Filled.Close, contentDescription = "Remove slot", tint = AccentCoral, modifier = Modifier.size(18.dp))
+        }
     }
 }
