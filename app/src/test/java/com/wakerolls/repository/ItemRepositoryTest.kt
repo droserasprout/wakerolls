@@ -26,6 +26,8 @@ class ItemRepositoryTest {
         category = "Breakfast",
         rarity = Rarity.COMMON,
         enabled = true,
+        rolledCount = 0,
+        completedCount = 0,
     )
 
     @Test

@@ -12,6 +12,7 @@ enum class Rarity(val weight: Int) {
             customWeights: Map<Rarity, Int> = emptyMap(),
             rarityOf: (T) -> Rarity,
         ): T {
+            require(items.isNotEmpty()) { "items must not be empty" }
             val totalWeight = items.sumOf { customWeights[rarityOf(it)] ?: rarityOf(it).weight }
             if (totalWeight <= 0) return items.random()
             var random = (1..totalWeight).random()

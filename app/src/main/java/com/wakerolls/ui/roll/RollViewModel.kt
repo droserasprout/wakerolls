@@ -157,7 +157,7 @@ class RollViewModel @Inject constructor(
             for (slot in scenario.slots) {
                 val kept = completedByCategory[slot.category] ?: mutableListOf()
                 val keptCount = minOf(kept.size, slot.count)
-                repeat(keptCount) { results.add(kept.removeFirst()) }
+                repeat(keptCount) { results.add(kept.removeAt(0)) }
                 val toRoll = slot.count - keptCount
                 if (toRoll > 0) {
                     val items = pickMultiple(slot.category, toRoll)
@@ -186,13 +186,15 @@ class RollViewModel @Inject constructor(
     }
 
     fun reroll(index: Int) {
-        if (!_uiState.value.allowPartialRerolls || _uiState.value.rerollsLeft <= 0) return
-        val current = _uiState.value.results.getOrNull(index) ?: return
         viewModelScope.launch {
+            val state = _uiState.value
+            if (!state.allowPartialRerolls || state.rerollsLeft <= 0) return@launch
+            val current = state.results.getOrNull(index) ?: return@launch
             consumeReroll()
             val items = itemRepository.observeEnabled(current.category).first()
             val weights = _uiState.value.weights
             val picked = if (items.isEmpty()) null else Rarity.weightedRandom(items, weights) { it.rarity }
+            picked?.let { itemRepository.incrementRolled(it.id) }
             val updated = _uiState.value.results.toMutableList()
             updated[index] = current.copy(item = picked)
             _uiState.value = _uiState.value.copy(results = updated)

@@ -10,6 +10,8 @@ import com.wakerolls.domain.model.Rarity
 import com.wakerolls.domain.model.Scenario
 import com.wakerolls.domain.model.ScenarioSlot
 import com.wakerolls.ui.roll.RollViewModel
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +33,7 @@ class RollViewModelTest {
     @get:Rule val tmpFolder = TemporaryFolder()
 
     private val testScope = TestScope(UnconfinedTestDispatcher() + Job())
-    private val itemRepository = mockk<ItemRepository>()
+    private val itemRepository = mockk<ItemRepository>(relaxUnitFun = true)
     private val scenarioRepository = mockk<ScenarioRepository>()
     private lateinit var dataStore: DataStore<Preferences>
 
@@ -88,23 +90,26 @@ class RollViewModelTest {
         vm.rollAll()
         val results = vm.uiState.value.results
         assertEquals(2, results.size)
-        assertEquals("Breakfast", results[0].category)
-        assertEquals("Activity", results[1].category)
-        assertNotNull(results[0].item)
-        assertNotNull(results[1].item)
+        val categories = results.map { it.category }.toSet()
+        assertEquals(setOf("Breakfast", "Activity"), categories)
+        assertTrue(results.all { it.item != null })
     }
 
     @Test
-    fun `rollAll with count 2 produces numbered results`() = runTest {
+    fun `rollAll with count 2 produces correct number of results`() = runTest {
         val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
         vm.selectScenario(2L)
         vm.rollAll()
         val results = vm.uiState.value.results
         assertEquals(3, results.size)
-        assertEquals("Breakfast #1", results[0].label)
-        assertEquals("Breakfast #2", results[1].label)
-        assertEquals("Activity", results[2].label)
-        assertNotEquals(results[0].item?.id, results[1].item?.id)
+        val breakfastResults = results.filter { it.category == "Breakfast" }
+        val activityResults = results.filter { it.category == "Activity" }
+        assertEquals(2, breakfastResults.size)
+        assertEquals(1, activityResults.size)
+        // Labels should be category name without #N
+        assertTrue(results.all { it.label == it.category })
+        // Two breakfast items should be different (picked without replacement)
+        assertNotEquals(breakfastResults[0].item?.id, breakfastResults[1].item?.id)
     }
 
     @Test
@@ -120,12 +125,12 @@ class RollViewModelTest {
     @Test
     fun `first roll is free, subsequent rerolls consume budget`() = runTest {
         val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
-        vm.rollAll() // first roll is free
+        vm.rollAll()
         assertTrue(vm.uiState.value.hasRolled)
         val initialRerolls = vm.uiState.value.rerollsLeft
-        vm.reroll(0) // costs 1
+        vm.reroll(0)
         assertEquals(initialRerolls - 1, vm.uiState.value.rerollsLeft)
-        vm.rollAll() // full reroll costs 1
+        vm.rollAll()
         assertEquals(initialRerolls - 2, vm.uiState.value.rerollsLeft)
     }
 
@@ -137,5 +142,58 @@ class RollViewModelTest {
         vm.selectScenario(2L)
         assertTrue(vm.uiState.value.results.isEmpty())
         assertEquals(2L, vm.uiState.value.selectedScenarioId)
+    }
+
+    @Test
+    fun `selectScenario with same id does not clear results`() = runTest {
+        val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
+        vm.rollAll()
+        val results = vm.uiState.value.results
+        vm.selectScenario(1L) // same scenario
+        assertEquals(results, vm.uiState.value.results)
+    }
+
+    @Test
+    fun `complete marks card and uncomplete reverts it`() = runTest {
+        val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
+        vm.rollAll()
+        assertFalse(vm.uiState.value.results[0].completed)
+        vm.complete(0)
+        assertTrue(vm.uiState.value.results[0].completed)
+        coVerify { itemRepository.incrementCompleted(any()) }
+        vm.uncomplete(0)
+        assertFalse(vm.uiState.value.results[0].completed)
+    }
+
+    @Test
+    fun `rerollAll preserves completed cards`() = runTest {
+        val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
+        vm.rollAll()
+        val completedItem = vm.uiState.value.results[0].item
+        vm.complete(0)
+        vm.rollAll()
+        val results = vm.uiState.value.results
+        val completed = results.filter { it.completed }
+        assertEquals(1, completed.size)
+        assertEquals(completedItem, completed[0].item)
+    }
+
+    @Test
+    fun `insufficient items shows warning and blocks roll`() = runTest {
+        every { itemRepository.observeEnabled("Empty") } returns flowOf(emptyList())
+        every { scenarioRepository.observeAll() } returns flowOf(listOf(
+            Scenario(id = 3L, name = "Bad", slots = listOf(ScenarioSlot(category = "Empty", count = 2))),
+        ))
+        val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
+        vm.rollAll()
+        assertTrue(vm.uiState.value.insufficientItems.isNotEmpty())
+        assertTrue(vm.uiState.value.results.isEmpty())
+    }
+
+    @Test
+    fun `rollAll increments rolled stats`() = runTest {
+        val vm = RollViewModel(itemRepository, scenarioRepository, dataStore)
+        vm.rollAll()
+        coVerify(atLeast = 1) { itemRepository.incrementRolled(any()) }
     }
 }

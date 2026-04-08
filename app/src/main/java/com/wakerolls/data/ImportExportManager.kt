@@ -62,7 +62,7 @@ class ImportExportManager @Inject constructor(
                 items.add(Item(
                     name = obj.getString("name"),
                     category = obj.getString("category"),
-                    rarity = Rarity.valueOf(obj.getString("rarity")),
+                    rarity = Rarity.entries.find { it.name == obj.optString("rarity") } ?: Rarity.COMMON,
                     enabled = obj.optBoolean("enabled", true),
                     rolledCount = obj.optInt("rolledCount", 0),
                     completedCount = obj.optInt("completedCount", 0),
