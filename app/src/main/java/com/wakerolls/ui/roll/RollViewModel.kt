@@ -148,17 +148,14 @@ class RollViewModel @Inject constructor(
             val results = mutableListOf<RollResult>()
             for (slot in scenario.slots) {
                 val items = pickMultiple(slot.category, slot.count)
-                if (slot.count == 1) {
-                    results.add(RollResult(label = slot.category, category = slot.category, item = items.firstOrNull()))
-                } else {
-                    items.forEachIndexed { index, item ->
-                        results.add(RollResult(label = "${slot.category} #${index + 1}", category = slot.category, item = item))
-                    }
-                    repeat(slot.count - items.size) { i ->
-                        results.add(RollResult(label = "${slot.category} #${items.size + i + 1}", category = slot.category, item = null))
-                    }
+                items.forEach { item ->
+                    results.add(RollResult(label = slot.category, category = slot.category, item = item))
+                }
+                repeat(slot.count - items.size) {
+                    results.add(RollResult(label = slot.category, category = slot.category, item = null))
                 }
             }
+            results.shuffle()
             _uiState.value = _uiState.value.copy(
                 results = results,
                 isRolling = false,
