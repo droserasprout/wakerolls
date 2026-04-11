@@ -163,14 +163,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             val weight = state.weights[rarity] ?: rarity.weight
             val isDefault = weight == rarity.weight
             val rarityColor = rarity.color()
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(DarkSurface)
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            SettingsRow {
                 if (!isDefault) {
                     IconButton(
                         onClick = { viewModel.setWeight(rarity, rarity.weight) },
@@ -218,14 +211,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         // ── Data ──
         SectionHeader("Data")
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(DarkSurface)
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        SettingsRow {
             Text("Export", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             TextButton(onClick = { exportLauncher.launch("wakerolls.json") }) {
                 Text("Export JSON", color = AccentGold)
@@ -234,14 +220,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(Modifier.height(8.dp))
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(DarkSurface)
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        SettingsRow {
             Text("Import", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             TextButton(onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) }) {
                 Text("Import JSON", color = AccentGold)
@@ -250,14 +229,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(Modifier.height(8.dp))
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(DarkSurface)
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        SettingsRow {
             Text("Statistics", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             TextButton(onClick = { viewModel.resetAllStats() }) {
                 Text("Reset all", color = AccentCoral)
@@ -298,7 +270,7 @@ private fun SectionHeader(title: String) {
     Spacer(Modifier.height(24.dp))
     Text(
         text = title,
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.typography.labelSmall,
         color = TextSecondary,
     )
     Spacer(Modifier.height(12.dp))

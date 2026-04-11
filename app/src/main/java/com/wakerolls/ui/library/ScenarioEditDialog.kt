@@ -98,7 +98,7 @@ fun ScenarioEditDialog(
                         slots = slots + ScenarioSlot(category = "", count = 1)
                     },
                 ) {
-                    Text("+ Add slot", color = AccentTeal)
+                    Text("+ Add slot", color = AccentGold)
                 }
 
                 Row(
@@ -183,27 +183,27 @@ private fun SlotRow(
         IconButton(
             onClick = { onCountChange(-1) },
             enabled = slot.count > 1,
-            modifier = Modifier.size(32.dp),
+            modifier = Modifier.size(36.dp),
         ) {
-            Text("\u2212", style = MaterialTheme.typography.titleMedium,
+            Text("\u2212", style = MaterialTheme.typography.titleLarge,
                 color = if (slot.count > 1) TextPrimary else TextSecondary)
         }
         Text(
             text = slot.count.toString(),
             style = MaterialTheme.typography.titleMedium,
             color = AccentGold,
-            modifier = Modifier.width(24.dp),
+            modifier = Modifier.width(28.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
         IconButton(
             onClick = { onCountChange(1) },
             enabled = slot.count < 5,
-            modifier = Modifier.size(32.dp),
+            modifier = Modifier.size(36.dp),
         ) {
-            Text("+", style = MaterialTheme.typography.titleMedium,
+            Text("+", style = MaterialTheme.typography.titleLarge,
                 color = if (slot.count < 5) TextPrimary else TextSecondary)
         }
-        IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+        IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
             Icon(Icons.Filled.Close, contentDescription = "Remove slot", tint = AccentCoral, modifier = Modifier.size(18.dp))
         }
     }

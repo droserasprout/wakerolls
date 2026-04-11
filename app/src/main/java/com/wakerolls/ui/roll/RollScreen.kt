@@ -48,7 +48,7 @@ fun RollScreen(viewModel: RollViewModel = hiltViewModel()) {
             .padding(horizontal = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
         Text(
             text = "Today's Roll",
             style = MaterialTheme.typography.headlineLarge,

@@ -123,7 +123,7 @@ No `Shape.kt` — radii applied inline via `RoundedCornerShape`:
 
 ### SectionHeader (Settings)
 
-- Spacer(24dp) + Text (titleSmall, TextSecondary) + Spacer(12dp)
+- Spacer(24dp) + Text (labelSmall, TextSecondary) + Spacer(12dp)
 
 ### goldSwitchColors
 
@@ -160,8 +160,8 @@ No `Shape.kt` — radii applied inline via `RoundedCornerShape`:
 
 ### SlotRow (Scenario dialog)
 
-- Row: category dropdown (weight 1) + −/count/+ controls (32dp buttons) + delete icon (18dp, AccentCoral)
-- Count display: titleMedium, AccentGold, 24dp width, centered
+- Row: category dropdown (weight 1) + −/count/+ controls (36dp buttons) + delete icon (18dp, AccentCoral)
+- Count display: titleMedium, AccentGold, 28dp width, centered
 
 ### AlertDialog (confirmations, warnings)
 
@@ -199,7 +199,7 @@ Column(fillMaxSize, bg=Background, padding: h=24, verticalScroll)
 
 ```
 Column(fillMaxSize, bg=Background, padding: h=20, centerH)
-  Spacer(32)
+  Spacer(24)
   Title: "Today's Roll", headlineLarge
   Spacer(8)
   Subtitle: reroll count (AccentTeal) or prompt (bodyMedium)
@@ -241,7 +241,7 @@ Box(fillMaxSize, bg=Background)
   Column
     Spacer(24)
     Title: "Scenarios", headlineLarge, padding: h=20
-    Spacer(16)
+    Spacer(8)
     LazyColumn(contentPadding: h=20 v=8)
       ScenarioCard items (spacedBy 16), key=id
   FAB(BottomEnd, padding=20)
@@ -324,7 +324,7 @@ All from `androidx.compose.material.icons`:
 |---------|-------|
 | Screen horizontal padding | 20dp (Roll, Items, Scenarios, Settings) |
 | Welcome horizontal padding | 24dp |
-| Screen top spacing | 24dp (list screens), 32dp (Roll), 48dp (Welcome) |
+| Screen top spacing | 24dp (all main screens), 48dp (Welcome) |
 | Section spacing | 24dp (SectionHeader top spacer) |
 | Item spacing | 8dp (between list items) |
 | Card spacing | 16dp (between roll cards, scenario cards, concept cards) |
@@ -333,11 +333,11 @@ All from `androidx.compose.material.icons`:
 | Dialog internal padding | 24dp |
 | Dialog field spacing | 16dp (spacedBy) |
 | Card internal padding | 20dp (RollCard, ScenarioCard, ConceptCard) |
-| Row internal padding | h=16dp, v=12-14dp (LibraryItemRow, SettingsRow) |
+| Row internal padding | h=16dp, v=14dp (SettingsRow, weight rows, data rows), h=16dp v=12dp (LibraryItemRow) |
 | Button height | 56dp (primary actions) |
 | Button corner radius | 16dp |
 | IconButton size | 36dp (card actions), 32dp (counters, slot controls) |
-| Icon size | 20dp (action icons), 18dp (category/slot icons) |
+| Icon size | 20dp (action icons), 18dp (category icons, slot delete) |
 | FAB edge padding | 20dp |
 | AlertDialog container | Surface |
 | Gradient border | 1dp, linearGradient accentColor 60%→10% or 40%→5% |

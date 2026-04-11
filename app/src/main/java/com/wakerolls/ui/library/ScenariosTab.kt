@@ -39,7 +39,7 @@ fun ScenariosScreen(viewModel: LibraryViewModel = hiltViewModel()) {
                 style = MaterialTheme.typography.headlineLarge,
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
             LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
                 items(state.scenarios, key = { it.id }) { scenario ->
                     ScenarioCard(
