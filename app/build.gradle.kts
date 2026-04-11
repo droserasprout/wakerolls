@@ -62,5 +62,5 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.turbine)
     testImplementation(libs.coroutines.test)
-    testImplementation("org.json:json:20231013")
+    testImplementation(libs.json)
 }

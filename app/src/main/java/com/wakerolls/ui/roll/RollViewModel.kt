@@ -157,7 +157,7 @@ class RollViewModel @Inject constructor(
             for (slot in scenario.slots) {
                 val kept = completedByCategory[slot.category] ?: mutableListOf()
                 val keptCount = minOf(kept.size, slot.count)
-                repeat(keptCount) { results.add(kept.removeFirst()) }
+                repeat(keptCount) { results.add(kept.removeAt(0)) }
                 val toRoll = slot.count - keptCount
                 if (toRoll > 0) {
                     val items = pickMultiple(slot.category, toRoll)
